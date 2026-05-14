@@ -6,13 +6,15 @@
     flake-utils.url = "github:numtide/flake-utils";
 
     # Versions taken from apple-oss-distributions/distribution-macOS@rel/macOS-26 release.json
-    xnu-src                  = { url = "github:apple-oss-distributions/xnu/xnu-12377.101.15"; flake = false; };
+    xnu-src                  = { url = "path:/Users/user/work/xnu"; flake = false; };
     bootstrap_cmds-src       = { url = "github:apple-oss-distributions/bootstrap_cmds/bootstrap_cmds-138"; flake = false; };
     dtrace-src               = { url = "github:apple-oss-distributions/dtrace/dtrace-413"; flake = false; };
     AvailabilityVersions-src = { url = "github:apple-oss-distributions/AvailabilityVersions/AvailabilityVersions-157.2"; flake = false; };
     Libsystem-src            = { url = "github:apple-oss-distributions/Libsystem/Libsystem-1356"; flake = false; };
     libplatform-src          = { url = "github:apple-oss-distributions/libplatform/libplatform-375.100.10"; flake = false; };
     libdispatch-src          = { url = "github:apple-oss-distributions/libdispatch/libdispatch-1542.100.32"; flake = false; };
+    grub-src                 = { url = "path:/Users/user/work/grub"; };
+    hfs-src                  = { url = "path:/Users/user/work/hfs"; flake = false; };
   };
 
   outputs = inputs@{ self, nixpkgs, flake-utils, ... }:
@@ -286,6 +288,31 @@
             sed -i 's|^\(\t.*\)install \$(DATA_INSTALL_FLAGS)|\1$(INSTALL) $(DATA_INSTALL_FLAGS)|' \
               xnu/libkern/libkern/Makefile
 
+            # Insert brk #0 at kernel entry to test if code is reached
+            sed -i '/^LEXT(_start)/{n;s/ARM64_PROLOG/brk\t#0\n\tARM64_PROLOG/}' \
+              xnu/osfmk/arm64/start.s
+
+            # Force boot-args for debugging: verbose, KDP, serial, keepsyms
+            cat > xnu/pexpert/arm/pe_bootargs.c << 'BOOTARGS_EOF'
+#include <pexpert/pexpert.h>
+#include <pexpert/boot.h>
+#include <string.h>
+#define FORCED_BOOT_ARGS " -v debug=0x14e serial=3 keepsyms=1"
+static int boot_args_patched = 0;
+char *
+PE_boot_args(void)
+{
+	char *cmdline = (char *)((boot_args *)PE_state.bootArgs)->CommandLine;
+	if (!boot_args_patched) {
+		if (strlen(cmdline) + strlen(FORCED_BOOT_ARGS) < BOOT_LINE_LENGTH) {
+			strlcat(cmdline, FORCED_BOOT_ARGS, BOOT_LINE_LENGTH);
+		}
+		boot_args_patched = 1;
+	}
+	return cmdline;
+}
+BOOTARGS_EOF
+
             # Pre-populate fakeroot/ with prebuilt artifacts so build.sh's existence checks
             # skip the xcodebuild-using prereq steps.
             mkdir -p fakeroot/usr/local/bin fakeroot/usr/local/libexec fakeroot/usr
@@ -342,14 +369,149 @@
         xnu-arm64  = mkXnu { arch = "ARM64";  machine = "VMAPPLE"; label = "arm64-vmapple"; };
         xnu-x86_64 = mkXnu { arch = "X86_64"; machine = "NONE";    label = "x86_64";        };
 
+        grubEfi = inputs.grub-src.packages.${system}.efi-x86_64;
+
+        newfs_hfs = pkgs.stdenv.mkDerivation {
+          pname = "newfs_hfs";
+          version = "715.100.10";
+          src = inputs.hfs-src;
+          buildInputs = [ pkgs.darwin.libutil ];
+          buildPhase = ''
+            mkdir -p include/hfs
+            ln -s ../../core/hfs_format.h include/hfs/hfs_format.h
+            clang -o newfs_hfs.bin \
+              -isystem ./include -I./newfs_hfs -I./core \
+              -framework CoreFoundation -framework IOKit \
+              -lutil \
+              -Wno-format -Wno-deprecated-non-prototype \
+              newfs_hfs/newfs_hfs.c newfs_hfs/makehfs.c newfs_hfs/hfs_endian.c
+          '';
+          installPhase = ''
+            mkdir -p $out/bin
+            cp newfs_hfs.bin $out/bin/newfs_hfs
+          '';
+        };
+
+        xpwn = pkgs.xpwn.overrideAttrs (old: {
+          meta = old.meta // { broken = false; };
+          env.NIX_CFLAGS_COMPILE = toString [
+            "-fcommon"
+            "-Wno-implicit-int"
+            "-Wno-incompatible-pointer-types"
+            "-Wno-deprecated-declarations"
+            "-Wno-format"
+            "-Wno-register"
+          ];
+        });
+
+        bootArgs = "-v debug=0x14e rd=md0 serial=1 -s io=0xff msgbuf=1048576 keepsyms=1 ignore_msrs=1 atm_diagnostic_config=0x100 no_efi_runtime=1";
+
+        rootfs = pkgs.runCommand "puredarwin-rootfs" {
+          nativeBuildInputs = [ newfs_hfs xpwn pkgs.stdenv.cc ];
+        } ''
+          clang -target x86_64-apple-macos10.15 -arch x86_64 \
+              -nostdlib -static -Wl,-e,__start -o init ${./init.c}
+          dd if=/dev/zero of=rootfs.img bs=1M count=8
+          newfs_hfs -v PureDarwin rootfs.img
+          hfsplus rootfs.img mkdir /sbin
+          hfsplus rootfs.img add init /sbin/launchd
+          hfsplus rootfs.img chmod 0100755 /sbin/launchd
+          mkdir -p $out
+          cp rootfs.img $out/rootfs.dmg
+        '';
+
+        esp = pkgs.runCommand "puredarwin-esp" {
+          nativeBuildInputs = [ pkgs.dosfstools pkgs.mtools ];
+        } ''
+          kernel=${xnu-x86_64}/DEVELOPMENT_X86_64/kernel.development
+
+          cat > grub.cfg << 'GRUBEOF'
+set timeout=3
+menuentry "PureDarwin (xnu-12377, serial)" {
+    xnu_kernel64 /boot/kernel boot-args="${bootArgs}" --no-devices
+    xnu_kextdir /boot/System.kext
+    xnu_ramdisk /boot/rootfs.dmg
+    boot
+}
+GRUBEOF
+
+          KEXT_ARGS=()
+          while IFS= read -r -d "" f; do
+            rel="''${f#${xnu-x86_64}/DEVELOPMENT_X86_64/}"
+            KEXT_ARGS+=("boot/$rel=$f")
+          done < <(find ${xnu-x86_64}/DEVELOPMENT_X86_64/System.kext -type f -print0)
+
+          ${grubEfi}/bin/grub-mkstandalone \
+              --format=x86_64-efi \
+              --output=BOOTX64.EFI \
+              --modules="xnu xnu_uuid part_gpt part_msdos fat hfsplus normal boot configfile" \
+              "boot/grub/grub.cfg=grub.cfg" \
+              "boot/kernel=$kernel" \
+              "boot/rootfs.dmg=${rootfs}/rootfs.dmg" \
+              "''${KEXT_ARGS[@]}"
+
+          mkfs.fat -C -F 32 esp.img 65536 >/dev/null
+          mmd -i esp.img ::/EFI ::/EFI/BOOT
+          mcopy -i esp.img BOOTX64.EFI ::/EFI/BOOT/BOOTX64.EFI
+
+          mkdir -p $out
+          cp esp.img $out/esp.img
+          cp $kernel $out/kernel.development
+        '';
+
+        run-vm = pkgs.writeShellScriptBin "puredarwin-vm" ''
+          set -euo pipefail
+          WORKDIR=$(mktemp -d)
+          trap "rm -rf $WORKDIR" EXIT
+
+          QEMU=${pkgs.qemu}
+          OVMF="$QEMU/share/qemu/edk2-x86_64-code.fd"
+          OVMF_VARS="$QEMU/share/qemu/edk2-i386-vars.fd"
+
+          cp "$OVMF_VARS" "$WORKDIR/ovmf-vars.fd"
+          chmod u+w "$WORKDIR/ovmf-vars.fd"
+
+          SERIAL_ARG="-serial file:$WORKDIR/serial.log"
+          GDB_ARG=""
+          for arg in "$@"; do
+            case "$arg" in
+              --serial) SERIAL_ARG="-serial stdio" ;;
+              --gdb)    GDB_ARG="-s -S"; echo "GDB on :1234 — symbol-file ${esp}/kernel.development" ;;
+            esac
+          done
+
+          if [[ "$SERIAL_ARG" == *"file:"* ]]; then
+            rm -f "$WORKDIR/serial.log"
+            touch "$WORKDIR/serial.log"
+            tail -f "$WORKDIR/serial.log" &
+            TAIL_PID=$!
+            trap "kill $TAIL_PID 2>/dev/null; rm -rf $WORKDIR" INT TERM EXIT
+          fi
+
+          exec "$QEMU/bin/qemu-system-x86_64" \
+              -machine q35 -m 4G -smp 1 \
+              -cpu Haswell-noTSX,vendor=GenuineIntel,stepping=4 \
+              -drive if=pflash,format=raw,readonly=on,file="$OVMF" \
+              -drive if=pflash,format=raw,file="$WORKDIR/ovmf-vars.fd" \
+              -drive file=${esp}/esp.img,format=raw,if=virtio,readonly=on \
+              $SERIAL_ARG \
+              -display none -monitor none \
+              $GDB_ARG \
+              -no-reboot
+        '';
+
       in {
         packages = {
-          inherit xcode kdk xnu-arm64 xnu-x86_64;
+          inherit xcode kdk xnu-arm64 xnu-x86_64 esp rootfs grubEfi newfs_hfs xpwn;
           default = pkgs.runCommand "xnu-all" {} ''
             mkdir -p $out/arm64 $out/x86_64
             cp -R ${xnu-arm64}/* $out/arm64/
             cp -R ${xnu-x86_64}/* $out/x86_64/
           '';
+        };
+        apps.default = {
+          type = "app";
+          program = "${run-vm}/bin/puredarwin-vm";
         };
       });
 }
