@@ -404,7 +404,7 @@ BOOTARGS_EOF
           ];
         });
 
-        bootArgs = "-v debug=0x14e rd=md0 serial=1 -s io=0xff msgbuf=1048576 keepsyms=1 ignore_msrs=1 atm_diagnostic_config=0x100 no_efi_runtime=1";
+        bootArgs = "-v debug=0x14e rd=md0 serial=1 -s io=0xff msgbuf=1048576 keepsyms=1 ignore_msrs=1 atm_diagnostic_config=0x100";
 
         rootfs = pkgs.runCommand "puredarwin-rootfs" {
           nativeBuildInputs = [ newfs_hfs xpwn pkgs.stdenv.cc ];

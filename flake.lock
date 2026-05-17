@@ -213,8 +213,8 @@
     "xnu-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1778764177,
-        "narHash": "sha256-OOB+KCRVnPTXt2C2EyIvygwNm7a6sUv7LMpCpIcYHiw=",
+        "lastModified": 1778816805,
+        "narHash": "sha256-dn8vOFKnnb88sOeFsyujyBYqlkCK5cPPW1IKQIOkQLk=",
         "path": "/Users/user/work/xnu",
         "type": "path"
       },
