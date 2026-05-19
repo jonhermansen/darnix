@@ -6,15 +6,15 @@
     flake-utils.url = "github:numtide/flake-utils";
 
     # Versions taken from apple-oss-distributions/distribution-macOS@rel/macOS-26 release.json
-    xnu-src                  = { url = "path:/Users/user/work/xnu"; flake = false; };
+    xnu-src                  = { url = "git+file:///Users/user/work/xnu"; flake = false; };
     bootstrap_cmds-src       = { url = "github:apple-oss-distributions/bootstrap_cmds/bootstrap_cmds-138"; flake = false; };
     dtrace-src               = { url = "github:apple-oss-distributions/dtrace/dtrace-413"; flake = false; };
     AvailabilityVersions-src = { url = "github:apple-oss-distributions/AvailabilityVersions/AvailabilityVersions-157.2"; flake = false; };
     Libsystem-src            = { url = "github:apple-oss-distributions/Libsystem/Libsystem-1356"; flake = false; };
     libplatform-src          = { url = "github:apple-oss-distributions/libplatform/libplatform-375.100.10"; flake = false; };
     libdispatch-src          = { url = "github:apple-oss-distributions/libdispatch/libdispatch-1542.100.32"; flake = false; };
-    grub-src                 = { url = "path:/Users/user/work/grub"; };
-    hfs-src                  = { url = "path:/Users/user/work/hfs"; flake = false; };
+    grub-src                 = { url = "git+file:///Users/user/work/grub"; };
+    hfs-src                  = { url = "git+file:///Users/user/work/hfs"; flake = false; };
   };
 
   outputs = inputs@{ self, nixpkgs, flake-utils, ... }:
@@ -404,20 +404,15 @@ BOOTARGS_EOF
           ];
         });
 
-        bootArgs = "-v debug=0x14e rd=md0 serial=1 -s io=0xff msgbuf=1048576 keepsyms=1 ignore_msrs=1 atm_diagnostic_config=0x100";
+        bootArgs = "-v debug=0x14e rd=md0 serial=1 -s io=0xff msgbuf=1048576 keepsyms=1 ignore_msrs=1 atm_diagnostic_config=0x100 amfi_get_out_of_my_way=1 cs_enforcement_disable=1";
 
         rootfs = pkgs.runCommand "puredarwin-rootfs" {
-          nativeBuildInputs = [ newfs_hfs xpwn pkgs.stdenv.cc ];
+          nativeBuildInputs = [ pkgs.stdenv.cc ];
         } ''
           clang -target x86_64-apple-macos10.15 -arch x86_64 \
-              -nostdlib -static -Wl,-e,__start -o init ${./init.c}
-          dd if=/dev/zero of=rootfs.img bs=1M count=8
-          newfs_hfs -v PureDarwin rootfs.img
-          hfsplus rootfs.img mkdir /sbin
-          hfsplus rootfs.img add init /sbin/launchd
-          hfsplus rootfs.img chmod 0100755 /sbin/launchd
+              -nostdlib -static -Wl,-e,__start -Wl,-adhoc_codesign -o init ${./init.c}
           mkdir -p $out
-          cp rootfs.img $out/rootfs.dmg
+          cp init $out/rootfs.dmg
         '';
 
         esp = pkgs.runCommand "puredarwin-esp" {
@@ -471,7 +466,8 @@ GRUBEOF
           cp "$OVMF_VARS" "$WORKDIR/ovmf-vars.fd"
           chmod u+w "$WORKDIR/ovmf-vars.fd"
 
-          SERIAL_ARG="-serial file:$WORKDIR/serial.log"
+          SERIAL_LOG="/tmp/puredarwin-serial.log"
+          SERIAL_ARG="-serial file:$SERIAL_LOG"
           GDB_ARG=""
           for arg in "$@"; do
             case "$arg" in
@@ -481,9 +477,9 @@ GRUBEOF
           done
 
           if [[ "$SERIAL_ARG" == *"file:"* ]]; then
-            rm -f "$WORKDIR/serial.log"
-            touch "$WORKDIR/serial.log"
-            tail -f "$WORKDIR/serial.log" &
+            rm -f "$SERIAL_LOG"
+            touch "$SERIAL_LOG"
+            tail -f "$SERIAL_LOG" &
             TAIL_PID=$!
             trap "kill $TAIL_PID 2>/dev/null; rm -rf $WORKDIR" INT TERM EXIT
           fi
