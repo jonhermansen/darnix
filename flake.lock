@@ -92,26 +92,32 @@
       },
       "locked": {
         "lastModified": 1778647252,
-        "narHash": "sha256-NAHE08EcFHCyEuT/+34e3Y3MwAUJquZcOV4ZXs90lLw=",
-        "path": "/Users/user/work/grub",
-        "type": "path"
+        "narHash": "sha256-xBQNo1utElJUsU76HqavOWZUVhZloZESBpd1I1Hi4Us=",
+        "ref": "refs/heads/darwin",
+        "rev": "0188b833c900dccc6fdcc47d356d344697dbbf04",
+        "revCount": 10901,
+        "type": "git",
+        "url": "file:///Users/user/work/grub"
       },
       "original": {
-        "path": "/Users/user/work/grub",
-        "type": "path"
+        "type": "git",
+        "url": "file:///Users/user/work/grub"
       }
     },
     "hfs-src": {
       "flake": false,
       "locked": {
         "lastModified": 1778782673,
-        "narHash": "sha256-LTBgtjCFCVjfmKKDybmNMqGW0LkdDTRz576iNYwSqLU=",
-        "path": "/Users/user/work/hfs",
-        "type": "path"
+        "narHash": "sha256-4bbmfQg/aiuuBh5SbIs6+TGsTnLyxT52pyTZQKTYJtA=",
+        "ref": "refs/heads/puredarwin",
+        "rev": "954dcf645d8eebd68657bf9d6159f290465aba48",
+        "revCount": 29,
+        "type": "git",
+        "url": "file:///Users/user/work/hfs"
       },
       "original": {
-        "path": "/Users/user/work/hfs",
-        "type": "path"
+        "type": "git",
+        "url": "file:///Users/user/work/hfs"
       }
     },
     "libdispatch-src": {
@@ -166,11 +172,11 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1777179511,
-        "narHash": "sha256-GCqyVuDsIavHaoFa1dGHAPGKkMbjMhexYN9wBZQNH8U=",
+        "lastModified": 1779142970,
+        "narHash": "sha256-gz6GXsiQApVvmHjCX2XQdtxp2gedZWLosNlDTR5b7dM=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "e56e56311fc951877e3fda0dac432554ce2d21c5",
+        "rev": "e4256fff830a2cab907de86c1bf4b38d8f0732f4",
         "type": "github"
       },
       "original": {
@@ -213,14 +219,17 @@
     "xnu-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1778816805,
-        "narHash": "sha256-dn8vOFKnnb88sOeFsyujyBYqlkCK5cPPW1IKQIOkQLk=",
-        "path": "/Users/user/work/xnu",
-        "type": "path"
+        "lastModified": 1779142884,
+        "narHash": "sha256-JcDiEp8xKJLn3QdUqYVGgmW81/uhzu5WEn5j2rmd3AA=",
+        "ref": "refs/heads/rel/xnu-12377",
+        "rev": "c8f64780249acd1f2c87d2c6bfc09b84062be5a5",
+        "revCount": 59,
+        "type": "git",
+        "url": "file:///Users/user/work/xnu"
       },
       "original": {
-        "path": "/Users/user/work/xnu",
-        "type": "path"
+        "type": "git",
+        "url": "file:///Users/user/work/xnu"
       }
     }
   },
