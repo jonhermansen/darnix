@@ -108,11 +108,11 @@
     "hfs-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1779364686,
-        "narHash": "sha256-IRoIANf2/N4hZlX0bzQNbAC+msz8z69Vs8v/Me2sYSU=",
+        "lastModified": 1779371195,
+        "narHash": "sha256-Re54wvvAa801l2ZLw3btTZAeoJWiLyRKv7wp1UcFwL0=",
         "owner": "jonhermansen",
         "repo": "hfs",
-        "rev": "26343671863341166def0941cc6ec18696747f19",
+        "rev": "e29a989bdf24dffb3fa0ea8f26c11c2de93cdf54",
         "type": "github"
       },
       "original": {
