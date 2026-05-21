@@ -219,6 +219,7 @@
           nativeBuildInputs = buildTools;
 
           xnu                  = inputs.xnu-src;
+          hfs                  = inputs.hfs-src;
           bootstrap_cmds       = inputs.bootstrap_cmds-src;
           dtrace               = inputs.dtrace-src;
           AvailabilityVersions = inputs.AvailabilityVersions-src;
@@ -231,6 +232,10 @@
               cp -R "''${!s}"/. "./$s"
               chmod -R u+w "./$s"
             done
+
+            # Copy HFS source into the xnu tree where bsd/conf/files expects it
+            mkdir -p xnu/bsd/hfs
+            cp -R "$hfs"/core/*.c "$hfs"/core/*.cpp "$hfs"/core/*.h xnu/bsd/hfs/
 
             # /usr/bin/env is the last impure host dep — replace globally across all sources.
             find . -type f -not -path './.git/*' -print0 \
