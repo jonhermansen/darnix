@@ -221,11 +221,11 @@
     "xnu-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1779336905,
-        "narHash": "sha256-/oQFz5vsWWpGFuIwAYy6NldEQhaw9H71ZKIvxhvZfoc=",
+        "lastModified": 1779337332,
+        "narHash": "sha256-z89df37poHRVudbfoQlVW08Xu28P0kJ5m9uB+Vd+Dt0=",
         "owner": "jonhermansen",
         "repo": "xnu",
-        "rev": "ad216acdd0634f288cdd52ae248950483bbf8352",
+        "rev": "6183c81119bdd74a2df7f4fdeaf73581ab1f1e0f",
         "type": "github"
       },
       "original": {
