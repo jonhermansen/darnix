@@ -7,7 +7,7 @@
 ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚═╝  ╚═╝
 ```
 
-[![asciicast](https://asciinema.org/a/x8zs3trLhU2pzZNp.svg)](https://asciinema.org/a/x8zs3trLhU2pzZNp)
+![Darnix boot demo](darnix-boot.gif)
 
 Boot a fully open-source Darwin system using Nix. One command, no macOS install required (beyond the build host).
 
@@ -134,13 +134,9 @@ nix build .#xnu-x86_64
 - Native x86_64 build: currently cross-compiles, should compile natively too
 - DMG installer: boot from a DMG on real hardware via development kernel
 
-## Special thanks
-
-[Obsidian Systems](https://obsidian.systems/) — The partner to bring your digital dream to life.
-
 ## Credit
 
-- [blacktop/darwin-xnu-build](https://github.com/blacktop/darwin-xnu-build) — upstream build scripts that this project wraps
+- [darwin-xnu-build](https://github.com/blacktop/darwin-xnu-build) — upstream build scripts that this project wraps
 - [PureDarwin](https://www.puredarwin.org/) — the original vision
 - [NixThePlanet](https://github.com/MatthewCroughan/NixThePlanet) — Nix-based OS virtualization
 - [kernelshaman](https://kernelshaman.blogspot.com/2021/02/building-xnu-for-macos-112-intel-apple.html)
