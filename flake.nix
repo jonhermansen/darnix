@@ -24,11 +24,16 @@
       in
         import ./nix {
           inherit pkgs inputs system;
-          buildScriptSrc = pkgs.lib.cleanSourceWith {
+          buildScriptSrc = let
+            root = toString ./.;
+            allowed = [ "build.sh" "codeql.sh" "patches" "Makefile" "templates" ];
+          in pkgs.lib.cleanSourceWith {
             src = ./.;
             filter = path: type:
-              let name = baseNameOf path; in
-              builtins.elem name [ "build.sh" "codeql.sh" "patches" "Makefile" "templates" ];
+              let
+                rel = pkgs.lib.removePrefix (root + "/") path;
+                top = builtins.head (pkgs.lib.splitString "/" rel);
+              in builtins.elem top allowed;
           };
         }
     );
