@@ -24,8 +24,15 @@ void _start(void) {
 	sys_open("/dev/console", 2 /* O_RDWR */);
 	sys_dup2(0, 1);
 	sys_dup2(0, 2);
-	print("\n\n========================================\n");
-	print("  PureDarwin init (pid 1)\n  Kernel booted successfully!\n");
-	print("========================================\n");
-	sys_exit(42);
+	print("\n\n");
+	print("\033[1;36m");
+	print(" ____    _    ____  _   _ _____  __\n");
+	print("|  _ \\  / \\  |  _ \\| \\ | |_ _\\ \\/ /\n");
+	print("| | | |/ _ \\ | |_) |  \\| || | \\  / \n");
+	print("| |_| / ___ \\|  _ <| |\\  || | /  \\ \n");
+	print("|____/_/   \\_\\_| \\_\\_| \\_|___/_/\\_\\\n");
+	print("\033[0m\n");
+	print("\033[5;1;32m");
+	print("  Hello from Nix! XNU kernel booted successfully.\033[0m\n\n");
+	for(;;) { __asm__ volatile("pause" ::: "memory"); }
 }

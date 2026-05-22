@@ -1,261 +1,144 @@
-# darwin-xnu-build
+# Darnix
 
-[![XNU CodeQL](https://github.com/blacktop/darwin-xnu-build/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/blacktop/darwin-xnu-build/actions/workflows/c-cpp.yml) ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/blacktop/darwin-xnu-build/total)
- [![LICENSE](https://img.shields.io/:license-mit-blue.svg)](https://doge.mit-license.org)
+Boot a fully open-source Darwin system using Nix. One command, no macOS install required (beyond the build host).
 
-
-
-
-> This repository contains scripts to build [xnu](https://github.com/apple-oss-distributions/xnu) as well as generate a kernel collection and [CodeQL](https://codeql.github.com) databases.
-
----
-
-## Supported OS Versions
-
-| Version    | Compiles |                                          CodeQL                                           | Boots *(arm64/x86_64)* |
-| ---------- | :------: | :---------------------------------------------------------------------------------------: | :--------------------: |
-| macOS 12.5 |    ✅     |                                             ❔                                            |    ❔       /     ✅     |
-| macOS 13.0 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v13.0/xnu-codeql.zip) |    ❔       /     ❔     |
-| macOS 13.1 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v13.1/xnu-codeql.zip) |    ❔       /     ❔     |
-| macOS 13.2 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v13.2/xnu-codeql.zip) |    ❔       /     ❔     |
-| macOS 13.3 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v13.3/xnu-codeql.zip) |    ❔       /     ❔     |
-| macOS 13.4 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v13.4/xnu-codeql.zip) |    ❔       /     ❔     |
-| macOS 13.5 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v13.5/xnu-codeql.zip) |    ❔       /     ❔     |
-| macOS 14.0 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v14.0/xnu-codeql.zip) |    ❔       /     ❔     |
-| macOS 14.1 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v14.1/xnu-codeql.zip) |    ❔       /     ❔     |
-| macOS 14.2 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v14.2/xnu-codeql.zip) |    ❔       /     ❔     |
-| macOS 14.3 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v14.3/xnu-codeql.zip) |    ✅       /     ✅     |
-| macOS 14.4 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v14.4/xnu-codeql.zip) |    ✅       /     ✅     |
-| macOS 14.5 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v14.5/xnu-codeql.zip) |    ✅       /     ✅     |
-| macOS 14.6 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v14.6/xnu-codeql.zip) |    ❔       /     ❔     |
-| macOS 15.0 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v15.0/xnu-codeql.zip) |    ✅       /     ✅     |
-| macOS 15.1 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v15.1/xnu-codeql.zip) |    ❔       /     ❔     |
-| macOS 15.2 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v15.2/xnu-codeql.zip) |    ❔       /     ❔     |
-| macOS 15.3 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v15.3/xnu-codeql.zip) |    ❔       /     ❔     |
-| macOS 15.4 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v15.4/xnu-codeql.zip) |    ❔       /     ❔     |
-| macOS 15.5 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v15.5/xnu-codeql.zip) |    ❔       /     ❔     |
-| macOS 15.6 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v15.6/xnu-codeql.zip) |    ✅       /     ❔     |
-| macOS 26.0 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v26.0/xnu-codeql-26.0.zip) |    ❔       /     ✅     |
-| macOS 26.1 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v26.1/xnu-codeql-26.1.zip) |    ❔       /     ❔     |
-| macOS 26.2 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v26.2/xnu-codeql-26.2.zip) |    ❔       /     ❔     |
-| macOS 26.3 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v26.3/xnu-codeql-26.3.zip) |    ❔       /     ❔     |
-| macOS 26.4 |    ✅     | [DB](https://github.com/blacktop/darwin-xnu-build/releases/download/v26.4/xnu-codeql-26.4.zip) |    ❔       /     ❔     |
-
-> [!NOTE]
-> CodeQL DBs built with `MACHINE_CONFIG=VMAPPLE`
-> MacOS `14.3` booted:
-> - via Virtualization.framework with `MACHINE_CONFIG=VMAPPLE`
-> - via qemu with `ARCH_CONFIG=x86_64`
-> - via ASi tested with `MACHINE_CONFIG=T8101` and `MACHINE_CONFIG=T6000`
-
-### Known Issue ⚠️
-
-Currently `MACHINE_CONFIG=T8103` is not correctly building for at least `14.3`
-
-> [!NOTE]
-> When attempting to boot try adding the boot-arg: `sudo nvram boot-args="-unsafe_kernel_text"`
-
-## Why? 🤔
-
-I'm hoping to patch and build the xnu source in interesting ways to aid in research and development of macOS/iOS security research tools as well as generate [CodeQL](https://securitylab.github.com/tools/codeql) databases for the community to use.
-
-## Getting Started
-
-### Dependencies
-
-- [homebrew](https://brew.sh)
-  - [jq](https://stedolan.github.io/jq/)
-  - [gum](https://github.com/charmbracelet/gum)
-  - [xcodes](https://github.com/RobotsAndPencils/xcodes)
-  - [ipsw](https://github.com/blacktop/ipsw)
-  - [cmake](https://cmake.org)
-  - [ninja](https://ninja-build.org)
-- XCode
-- python3
-- [codeql CLI](https://codeql.github.com/docs/codeql-cli/)
-
-> [!NOTE]
-> The `build.sh` script will install all these for you if you are connected to the internet.
-
-### Clone the repo
-
-```bash
-git clone https://github.com/blacktop/darwin-xnu-build.git
-cd darwin-xnu-build
+```
+ ____    _    ____  _   _ _____  __
+|  _ \  / \  |  _ \| \ | |_ _\ \/ /
+| | | |/ _ \ | |_) |  \| || | \  /
+| |_| / ___ \|  _ <| |\  || | /  \
+|____/_/   \_\_| \_\_| \_|___/_/\_\
 ```
 
-```bash
-❯ ./build.sh --help
-
-Usage: build.sh [-h] [--clean] [--kc]
-
-This script builds the macOS XNU kernel
-
-Where:
-    -h|--help       show this help text
-    -c|--clean      cleans build artifacts and cloned repos
-    -k|--kc         create kernel collection (via kmutil create)
+```
+$ nix run github:jonhermansen/darwin-xnu-build/nix
 ```
 
-### Build the kernel and kernel Collection
+Boots XNU (macOS 26.4 / xnu-12377.101.15) in QEMU with an HFS+ root filesystem, devfs, and a working `/dev/console` — all from a single Nix flake. The entire build runs under Nix's strict sandbox (`sandbox = true`) with no network access, no impure host dependencies, and no `/dev` access.
 
-```bash
-KERNEL_CONFIG=RELEASE ARCH_CONFIG=ARM64 MACHINE_CONFIG=VMAPPLE ./build.sh --kc
+## What this is
+
+Darnix is a revival of the [PureDarwin](https://www.puredarwin.org/) idea: run Apple's open-source XNU kernel with an entirely open userland managed by Nix. The long-term goal is a NixOS-style system on a Darwin kernel.
+
+**Current status:** The kernel boots in QEMU (x86_64, TCG), mounts an HFS+ ramdisk as root, opens `/dev/console`, and executes a statically linked init binary that prints to serial. There is no networking, no kext loading, and no userland beyond init.
+
+## What we had to do
+
+### Nix build system (`darwin-xnu-build`)
+- Wrapped [blacktop/darwin-xnu-build](https://github.com/blacktop/darwin-xnu-build) in a Nix flake that builds XNU in a fully sandboxed derivation
+- All Apple open-source dependencies (bootstrap_cmds, dtrace, AvailabilityVersions, Libsystem, libplatform, libdispatch) fetched as flake inputs
+- Xcode SDK and KDK extracted from Apple's downloads and wrapped as Nix derivations
+- `nix run` builds the kernel, assembles a GRUB EFI image with embedded ramdisk, and launches QEMU
+
+### XNU kernel patches (`xnu`)
+
+**QEMU platform support:**
+- Built-in platform expert for QEMU (`IOQEMUPlatform`) — no IOKit kexts needed
+- PRNG fallback when RDRAND/RDSEED are unavailable (QEMU TCG doesn't emulate them)
+- `ignore_msrs` boot arg for unimplemented MSRs under TCG
+- TSC fallback when `MSR_PLATFORM_INFO` bus ratio reads as 0
+- EFI runtime mapping skip for QEMU's firmware
+- Default to 1 CPU when ACPI tables are missing
+
+**Bare boot (no kexts):**
+- Skip networking, pthread shims, trust cache, corecrypto, AMFI
+- Guard subsystems that assume kexts/coalitions/entitlements are present
+- Allow `PE_i_can_has_debugger` on DEVELOPMENT builds
+- Skip code signing validation when enforcement is disabled
+
+**HFS+ as root filesystem:**
+- Registered HFS as an in-kernel filesystem
+- Added `VFC_VFSCANMOUNTROOT` flag so `vfs_mountroot()` tries HFS
+- Fixed `bsd_init` console open: `FREAD|FWRITE` → `O_RDWR`, `authfd=0` → `AUTH_OPEN_NOAUTHFD`
+
+### HFS+ in-kernel build (`hfs`)
+
+Apple's HFS+ ships as a kext depending on IOKit and corecrypto. We ported it to compile directly into the kernel:
+- Stubbed IOKit helper functions
+- Called `hfs_init_zones()` from `hfs_init()` (previously only called from the kext's IOKit entry point)
+- Fixed `hfs_getvoluuid()` to use a fixed UUID (MD5 requires corecrypto which isn't available)
+- Stubbed AKS (Apple Key Services) for content protection code paths
+- Patched `newfs_hfs` to format regular files, not just block devices (runs inside Nix sandbox)
+
+### GRUB (`grub`)
+- Fixed `xnu_kernel64` page fault loading 64-bit Mach-O kernels
+- Added Nix flake for building GRUB EFI on aarch64-darwin
+
+### HFS+ ramdisk image
+- Built with patched `newfs_hfs` + `xpwn`'s `hfsplus` tool
+- 8 MB image containing `/sbin/launchd` and `/dev` mountpoint
+- Created entirely inside the Nix sandbox — no root, no devices
+
+## Architecture
+
+```
+nix run
+  └─ QEMU (x86_64, TCG, no KVM)
+       └─ GRUB EFI (grub-mkstandalone)
+            ├─ xnu_kernel64 /boot/kernel
+            ├─ xnu_ramdisk /boot/rootfs-hfs.dmg   ← HFS+ image
+            └─ boot
+                 └─ XNU boots
+                      ├─ vfs_mountroot() → HFS+ on md0
+                      ├─ devfs_kernel_mount("/dev")
+                      ├─ open /dev/console → fd 0/1/2
+                      └─ exec /sbin/launchd (init)
 ```
 
-> [!NOTE]
-> Supported `KERNEL_CONFIG` include:
-> - `RELEASE`
-> - `DEVELOPMENT`
->
-> Supported `MACHINE_CONFIG` include:
-> - `T8101`
-> - `T8103`
-> - `T6000`
-> - `VMAPPLE`
+## Boot options
+
+GRUB presents two menu entries:
+
+| Entry | Root filesystem | Description |
+|-------|----------------|-------------|
+| **Darnix (HFS+)** | 8 MB HFS+ ramdisk | Real filesystem with directory hierarchy |
+| **Darnix (mockfs)** | Raw Mach-O binary | Minimal fake FS for debugging (the ramdisk *is* the binary) |
+
+## Current limitations
+
+- **x86_64 only** — cross-compiled from aarch64-darwin, runs under TCG (no KVM on Apple Silicon)
+- **No networking** — network subsystem init is skipped
+- **No crypto** — corecrypto kext not loaded, volume UUID is hardcoded
+- **No kext loading** — HFS, devfs, and all filesystems are compiled into the kernel
+- **No ACPI** — fake platform expert, hardcoded to 1 CPU
+- **Build host** — currently requires aarch64-darwin (macOS on Apple Silicon) with Xcode SDK
+
+## Building
 
 ```bash
-<SNIP>
- ⇒ 📦 Building kernel collection for 'kernel.release.t6000'
-   • Decompressing KernelManagement kernelcache
-Merged LINKEDIT:
-  weak bindings size:          0KB
-  exports info size:           0KB
-  bindings size:               0KB
-  lazy bindings size:          0KB
-  function starts size:       41KB
-  data in code size:           0KB
-  symbol table size:        3702KB (85348 exports, 87979 imports)
-  symbol string pool size:  6465KB
-LINKEDITS optimized from 30MB to 10MB
-time to layout cache: 0ms
-time to copy cached dylibs into buffer: 1ms
-time to adjust segments for new split locations: 2ms
-time to bind all images: 8ms
-time to optimize Objective-C: 0ms
-time to do stub elimination: 0ms
-time to optimize LINKEDITs: 2ms
-time to compute slide info: 1ms
-time to compute UUID and codesign cache file: 1ms
-  🎉 XNU Build Done!
+# Build everything (kernel + ESP + ramdisk)
+nix build .#esp
+
+# Build and boot in QEMU
+nix run
+
+# Build just the kernel
+nix build .#xnu-x86_64
 ```
 
-Check that the output contains all the KEXTs
+## Repositories
 
-```bash
-❯ ipsw macho info build/oss-xnu.kc | head
-Magic         = 64-bit MachO
-Type          = FILESET
-CPU           = AARCH64, ARM64e
-Commands      = 241 (Size: 17160)
-Flags         = None
-000: LC_UUID                     67DF7148-8EEC-B1A6-5F51-7502DADF2264
-001: LC_BUILD_VERSION            Platform: unknown, SDK: 0.0
-002: LC_UNIXTHREAD               Threads: 1, ARM64 EntryPoint: 0xfffffe0007ad1488
-003: LC_DYLD_CHAINED_FIXUPS      offset=0x003690000  size=0x444
-004: LC_SEGMENT_64 sz=0x00008000 off=0x00000000-0x00008000 addr=0xfffffe0007004000-0xfffffe000700c000 r--/r--   __TEXT
-<SNIP>
-```
+| Repo | Branch | Description |
+|------|--------|-------------|
+| [darwin-xnu-build](https://github.com/jonhermansen/darwin-xnu-build/tree/nix) | `nix` | Nix flake, build scripts, init binary, QEMU runner |
+| [xnu](https://github.com/jonhermansen/xnu/tree/nix) | `nix` | Patched XNU kernel |
+| [hfs](https://github.com/jonhermansen/hfs/tree/nix) | `nix` | HFS+ ported to in-kernel build |
+| [grub](https://github.com/jonhermansen/grub/tree/nix) | `nix` | GRUB with Mach-O fix + Nix flake |
 
-### Build the XNU library (macOS 26.0+)
+## What's next
 
-```bash
-MACOS_VERSION='26.1' KERNEL_CONFIG=RELEASE ARCH_CONFIG=ARM64 MACHINE_CONFIG=VMAPPLE ./build.sh --lib
-```
+- Shell: get toybox running with serial I/O
+- Kext support: rebuild with proper kext loading infrastructure
+- Native x86_64 build: currently cross-compiles, should compile natively too
+- DMG installer: boot from a DMG on real hardware via development kernel
 
-This toggles Apple's `RC_ProjectName=xnu_libraries` path and drops the archive plus metadata into `build/xnu-lib.obj/`:
+## Special thanks
 
-- `build/xnu-lib.obj/libkernel.release.vmapple.a`
-- `build/xnu-lib.obj/RELEASE_ARM64_VMAPPLE/*.libfilelist`
-- `build/xnu-lib.obj/RELEASE_ARM64_VMAPPLE/all-{alias,kpi}.exp`
-
-Every GitHub release also publishes a pre-packed `xnu-lib-<version>.tar.gz` bundle mirroring the layout above, so researchers without a local build host can download the archive and supporting lists directly.
-
-### Clean rebuild the kernel and kernel collection
-
-```bash
-MACOS_VERSION='15.0' KERNEL_CONFIG=RELEASE ARCH_CONFIG=ARM64 MACHINE_CONFIG=VMAPPLE ./build.sh --clean --kc
-```
-
-### Generate a CodeQL database
-
-```bash
-MACOS_VERSION='15.0' KERNEL_CONFIG=RELEASE ARCH_CONFIG=ARM64 MACHINE_CONFIG=VMAPPLE ./codeql.sh
-```
-```bash
-<SNIP>
-[2023-03-03 22:33:20] [build-stdout]   🎉 XNU Build Done!
-Finalizing database at darwin-xnu-build/xnu-codeql.
-Running TRAP import for CodeQL database at darwin-xnu-build/xnu-codeql...
-TRAP import complete (1m46s).
-Successfully created database at darwin-xnu-build/xnu-codeql.
-[info] Deleting log files...
-[info] Zipping the CodeQL database...
-  🎉 CodeQL Database Create Done!
-```
-
-Script builds and zips up the CodeQL database
-
-```bash
-❯ ll xnu-codeql-<macOS_version>.zip
--rw-r--r--@ 1 blacktop  staff   219M Mar  3 22:35 xnu-codeql-<macOS_version>.zip
-```
-
-### Generate a CodeQL database *(in a `local` **Tart** VM)*
-
-Install deps: *[packer](https://developer.hashicorp.com/packer), [tart](https://tart.ru) and [cirrus](https://github.com/cirruslabs/cirrus-cli)*
-
-```bash
-make deps
-```
-
-Build VM image
-
-```bash
-make build-vm
-```
-
-Create CodeQL DB
-
-```bash
-make codeql-db
-```
-
-```bash
- > Building CodeQL Database
-🕓 'Build' Task 08:22
-   ✅ pull virtual machine 0.0s
-✅ 'Build' Task 47:59
- 🎉 Done! 🎉
-🕒 'Build' Task 46:28
-✅ 'Build' Task 48:15
-```
-
-```bash
-❯ tree artifacts/
-
-artifacts/
-└── Build
-    └── binary
-        └── xnu-codeql.zip
-
-3 directories, 1 file
-```
-
-## TODO
-
-- [x] ~~Auto build xnu with Github Actions~~
-- [x] ~~Auto generate CodeQL database with Github Actions~~
-
-## NOTES
-
-To see kernel logs
-
-```bash
-log show --debug --last boot --predicate 'process == "kernel"'
-```
+[Obsidian Systems](https://obsidian.systems/) — The partner to bring your digital dream to life.
 
 ## Credit
 
-- <https://github.com/pwn0rz/xnu-build>
-- <https://kernelshaman.blogspot.com/2021/02/building-xnu-for-macos-112-intel-apple.html>
+- [blacktop/darwin-xnu-build](https://github.com/blacktop/darwin-xnu-build) — upstream build scripts that this project wraps
+- [PureDarwin](https://www.puredarwin.org/) — the original vision
+- [pwn0rz/xnu-build](https://github.com/pwn0rz/xnu-build)
+- [kernelshaman](https://kernelshaman.blogspot.com/2021/02/building-xnu-for-macos-112-intel-apple.html)

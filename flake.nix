@@ -30,8 +30,9 @@
           url = "https://download.developer.apple.com/Developer_Tools/Xcode_26.4.1/Xcode_26.4.1_Apple_silicon.xip";
         };
 
-        kdkDmg = pkgs.fetchurl {
-          url = "https://github.com/dortania/KdkSupportPkg/releases/download/25E253/Kernel_Debug_Kit_26.4.1_build_25E253.dmg";
+        kdkDmg = pkgs.requireFile {
+          name = "Kernel_Debug_Kit_26.4.1_build_25E253.dmg";
+          url = "https://download.developer.apple.com/macOS/Kernal_Debug_Kit_26.4.1_build_25E253/Kernel_Debug_Kit_26.4.1_build_25E253.dmg";
           hash = "sha256-23nDOhApwoNTIq0jpJVJSeHAL52WhuwKnBJuYpqzA/M=";
         };
 
@@ -202,6 +203,8 @@
           '';
         };
 
+        withLTO = true;
+
         mkXnu = { arch, machine, label, kernelConfig ? "DEVELOPMENT" }: let
           buildTools = with pkgs; [
             jq git cmake ninja gnumake
@@ -365,6 +368,7 @@ BOOTARGS_EOF
             export MACOS_VERSION=26.4
             export RC_ProjectSourceVersion=12377.101.15
             export HOME=$TMPDIR
+            export BUILD_LTO=${if withLTO then "1" else "0"}
             bash ./build.sh
           '';
 
