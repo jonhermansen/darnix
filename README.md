@@ -11,16 +11,16 @@ Boot a fully open-source Darwin system using Nix. One command, no macOS install 
 ```
 
 ```
-$ nix run github:jonhermansen/darwin-xnu-build/nix
+$ nix run github:jonhermansen/darnix
 ```
 
-Boots XNU (macOS 26.4 / xnu-12377.101.15) in QEMU with an HFS+ root filesystem, devfs, and a working `/dev/console` — all from a single Nix flake. The entire build runs under Nix's strict sandbox (`sandbox = true`) with no network access, no impure host dependencies, and no `/dev` access.
+Boots XNU (macOS 26.4 / xnu-12377.101.15) in QEMU with an HFS+ root filesystem and serial console — all from a single Nix flake. The entire build runs under Nix's strict sandbox (`sandbox = true`) — no network access, no `/dev` access, no DMG mounting or `hdiutil`, no system side effects.
 
 ## What this is
 
 Darnix is a revival of the [PureDarwin](https://www.puredarwin.org/) idea: run Apple's open-source XNU kernel with an entirely open userland managed by Nix. The long-term goal is a NixOS-style system on a Darwin kernel.
 
-**Current status:** The kernel boots in QEMU (x86_64, TCG), mounts an HFS+ ramdisk as root, opens `/dev/console`, and executes a statically linked init binary that prints to serial. There is no networking, no kext loading, and no userland beyond init.
+**Current status:** The kernel boots in QEMU (x86_64 emulated via TCG on aarch64-darwin), mounts an HFS+ ramdisk as root, and executes a statically linked init binary with serial console output. There is no networking, no kext loading, and no userland beyond init.
 
 ## What we had to do
 
@@ -72,17 +72,18 @@ Apple's HFS+ ships as a kext depending on IOKit and corecrypto. We ported it to 
 ## Architecture
 
 ```
-nix run
-  └─ QEMU (x86_64, TCG, no KVM)
-       └─ GRUB EFI (grub-mkstandalone)
-            ├─ xnu_kernel64 /boot/kernel
-            ├─ xnu_ramdisk /boot/rootfs-hfs.dmg   ← HFS+ image
-            └─ boot
-                 └─ XNU boots
-                      ├─ vfs_mountroot() → HFS+ on md0
-                      ├─ devfs_kernel_mount("/dev")
-                      ├─ open /dev/console → fd 0/1/2
-                      └─ exec /sbin/launchd (init)
+aarch64-darwin host
+  └─ nix run
+       └─ qemu-system-x86_64 (TCG, software emulation)
+            └─ GRUB EFI (grub-mkstandalone)
+                 ├─ xnu_kernel64 /boot/kernel
+                 ├─ xnu_ramdisk /boot/rootfs-hfs.dmg
+                 └─ boot
+                      └─ XNU boots
+                           ├─ HFS+ root on md0 (ramdisk)
+                           ├─ devfs on /dev
+                           ├─ serial console (fd 0/1/2)
+                           └─ exec /sbin/launchd
 ```
 
 ## Boot options
@@ -96,7 +97,7 @@ GRUB presents two menu entries:
 
 ## Current limitations
 
-- **x86_64 only** — cross-compiled from aarch64-darwin, runs under TCG (no KVM on Apple Silicon)
+- **x86_64 only** — cross-compiled from aarch64-darwin, runs under TCG (software emulation)
 - **No networking** — network subsystem init is skipped
 - **No crypto** — corecrypto kext not loaded, volume UUID is hardcoded
 - **No kext loading** — HFS, devfs, and all filesystems are compiled into the kernel
@@ -120,7 +121,7 @@ nix build .#xnu-x86_64
 
 | Repo | Branch | Description |
 |------|--------|-------------|
-| [darwin-xnu-build](https://github.com/jonhermansen/darwin-xnu-build/tree/nix) | `nix` | Nix flake, build scripts, init binary, QEMU runner |
+| [darnix](https://github.com/jonhermansen/darnix) | `nix` | Nix flake, build scripts, init binary, QEMU runner |
 | [xnu](https://github.com/jonhermansen/xnu/tree/nix) | `nix` | Patched XNU kernel |
 | [hfs](https://github.com/jonhermansen/hfs/tree/nix) | `nix` | HFS+ ported to in-kernel build |
 | [grub](https://github.com/jonhermansen/grub/tree/nix) | `nix` | GRUB with Mach-O fix + Nix flake |
