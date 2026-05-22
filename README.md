@@ -140,5 +140,5 @@ nix build .#xnu-x86_64
 
 - [blacktop/darwin-xnu-build](https://github.com/blacktop/darwin-xnu-build) — upstream build scripts that this project wraps
 - [PureDarwin](https://www.puredarwin.org/) — the original vision
-- [pwn0rz/xnu-build](https://github.com/pwn0rz/xnu-build)
+- [NixThePlanet](https://github.com/MatthewCroughan/NixThePlanet) — Nix-based OS virtualization
 - [kernelshaman](https://kernelshaman.blogspot.com/2021/02/building-xnu-for-macos-112-intel-apple.html)

@@ -217,7 +217,14 @@
         in pkgs.stdenvNoCC.mkDerivation {
           pname   = "xnu-${label}";
           version = "12377.101.15";
-          src = builtins.path { path = ./.; name = "darwin-xnu-build"; };
+          src = let
+            allowedPaths = [ "build.sh" "codeql.sh" "patches" "Makefile" "templates" ];
+          in pkgs.lib.cleanSourceWith {
+            src = ./.;
+            filter = path: type:
+              let name = baseNameOf path; in
+              builtins.elem name allowedPaths;
+          };
 
           nativeBuildInputs = buildTools;
 
@@ -422,7 +429,7 @@ BOOTARGS_EOF
           nativeBuildInputs = [ pkgs.stdenv.cc ];
         } ''
           clang -target x86_64-apple-macos10.15 -arch x86_64 \
-              -nostdlib -static -Wl,-e,__start -Wl,-adhoc_codesign -o init ${./init.c}
+              -nostdlib -static -Wl,-e,__start -Wl,-adhoc_codesign -o init ${./nix/init.c}
           mkdir -p $out
           cp init $out/init
         '';
