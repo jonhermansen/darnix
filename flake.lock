@@ -108,11 +108,11 @@
     "hfs-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1779371195,
-        "narHash": "sha256-Re54wvvAa801l2ZLw3btTZAeoJWiLyRKv7wp1UcFwL0=",
+        "lastModified": 1779411756,
+        "narHash": "sha256-0zUtmuiu28L2ogrp8t+RnRlaD8CkKuXXzPpqIoAm9Vw=",
         "owner": "jonhermansen",
         "repo": "hfs",
-        "rev": "e29a989bdf24dffb3fa0ea8f26c11c2de93cdf54",
+        "rev": "e8e9b2b574b3537d6a991cd92a437bbaf8a1ee93",
         "type": "github"
       },
       "original": {
@@ -221,11 +221,11 @@
     "xnu-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1779364685,
-        "narHash": "sha256-Qdffjm+vlAzLxlEIjEO8bcgd9RI240cNP7gzLzutXQQ=",
+        "lastModified": 1779415732,
+        "narHash": "sha256-0uPJ7wTvPs3Ha/mX775zpRT8vatv1Bes/GsbiPB5Lo8=",
         "owner": "jonhermansen",
         "repo": "xnu",
-        "rev": "ce0dd6907c866a7e26c6c09ca9df722cf37bd244",
+        "rev": "79c848b50fdc5bae2eaf5c4315e3419337fa3eff",
         "type": "github"
       },
       "original": {

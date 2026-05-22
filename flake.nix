@@ -204,7 +204,7 @@
 
         mkXnu = { arch, machine, label, kernelConfig ? "DEVELOPMENT" }: let
           buildTools = with pkgs; [
-            jq git cmake ninja
+            jq git cmake ninja gnumake
             gnugrep gnused gawk gnupatch coreutils curl which findutils gzip pax rcodesign
             perl python3 tcsh bash
             xcrunShim xcodeSelectShim swVersShim sysctlShim codesignShim plutilShim
@@ -237,6 +237,7 @@
             mkdir -p xnu/bsd/hfs xnu/bsd/hfs_encodings
             cp -R "$hfs"/core/*.c "$hfs"/core/*.cpp "$hfs"/core/*.h xnu/bsd/hfs/
             cp -R "$hfs"/hfs_encodings/*.c "$hfs"/hfs_encodings/*.h xnu/bsd/hfs_encodings/
+            ln -s hfs xnu/bsd/core
 
             # /usr/bin/env is the last impure host dep — replace globally across all sources.
             find . -type f -not -path './.git/*' -print0 \
@@ -357,13 +358,14 @@ BOOTARGS_EOF
             export NIX_LIBSYSTEM_PATH=${xcode}/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr
             unset SDKROOT NIX_CFLAGS_COMPILE NIX_LDFLAGS
             export EXTRA_PATH="${pkgs.lib.makeBinPath buildTools}"
+            export GNUMAKE="${pkgs.gnumake}/bin/make"
             export KERNEL_CONFIG=${kernelConfig}
             export ARCH_CONFIG=${arch}
             export MACHINE_CONFIG=${machine}
             export MACOS_VERSION=26.4
             export RC_ProjectSourceVersion=12377.101.15
             export HOME=$TMPDIR
-            TRACE=1 bash ./build.sh
+            bash ./build.sh
           '';
 
           installPhase = ''
@@ -412,13 +414,31 @@ BOOTARGS_EOF
 
         bootArgs = "-v debug=0x14e rd=md0 serial=1 -s io=0xff msgbuf=1048576 keepsyms=1 ignore_msrs=1 atm_diagnostic_config=0x100 amfi_get_out_of_my_way=1 cs_enforcement_disable=1";
 
-        rootfs = pkgs.runCommand "puredarwin-rootfs" {
+        initBin = pkgs.runCommand "puredarwin-init" {
           nativeBuildInputs = [ pkgs.stdenv.cc ];
         } ''
           clang -target x86_64-apple-macos10.15 -arch x86_64 \
               -nostdlib -static -Wl,-e,__start -Wl,-adhoc_codesign -o init ${./init.c}
           mkdir -p $out
-          cp init $out/rootfs.dmg
+          cp init $out/init
+        '';
+
+        rootfs-mockfs = pkgs.runCommand "puredarwin-rootfs-mockfs" {} ''
+          mkdir -p $out
+          cp ${initBin}/init $out/rootfs.dmg
+        '';
+
+        rootfs-hfs = pkgs.runCommand "puredarwin-rootfs-hfs" {
+          nativeBuildInputs = [ newfs_hfs xpwn ];
+        } ''
+          dd if=/dev/zero of=rootfs.dmg bs=1M count=8
+          newfs_hfs -s -v Darnix -b 4096 rootfs.dmg
+          hfsplus rootfs.dmg mkdir /sbin
+          hfsplus rootfs.dmg mkdir /dev
+          hfsplus rootfs.dmg add ${initBin}/init /sbin/launchd
+          hfsplus rootfs.dmg chmod 755 /sbin/launchd
+          mkdir -p $out
+          cp rootfs.dmg $out/rootfs.dmg
         '';
 
         esp = pkgs.runCommand "puredarwin-esp" {
@@ -427,11 +447,18 @@ BOOTARGS_EOF
           kernel=${xnu-x86_64}/DEVELOPMENT_X86_64/kernel.development
 
           cat > grub.cfg << 'GRUBEOF'
-set timeout=3
-menuentry "PureDarwin (xnu-12377, serial)" {
+set timeout=5
+set default=0
+menuentry "Darnix (HFS+)" {
     xnu_kernel64 /boot/kernel boot-args="${bootArgs}" --no-devices
     xnu_kextdir /boot/System.kext
-    xnu_ramdisk /boot/rootfs.dmg
+    xnu_ramdisk /boot/rootfs-hfs.dmg
+    boot
+}
+menuentry "Darnix (mockfs)" {
+    xnu_kernel64 /boot/kernel boot-args="${bootArgs}" --no-devices
+    xnu_kextdir /boot/System.kext
+    xnu_ramdisk /boot/rootfs-mockfs.dmg
     boot
 }
 GRUBEOF
@@ -448,7 +475,8 @@ GRUBEOF
               --modules="xnu xnu_uuid part_gpt part_msdos fat hfsplus normal boot configfile" \
               "boot/grub/grub.cfg=grub.cfg" \
               "boot/kernel=$kernel" \
-              "boot/rootfs.dmg=${rootfs}/rootfs.dmg" \
+              "boot/rootfs-hfs.dmg=${rootfs-hfs}/rootfs.dmg" \
+              "boot/rootfs-mockfs.dmg=${rootfs-mockfs}/rootfs.dmg" \
               "''${KEXT_ARGS[@]}"
 
           mkfs.fat -C -F 32 esp.img 65536 >/dev/null
@@ -504,7 +532,7 @@ GRUBEOF
 
       in {
         packages = {
-          inherit xcode kdk xnu-arm64 xnu-x86_64 esp rootfs grubEfi newfs_hfs xpwn;
+          inherit xcode kdk xnu-arm64 xnu-x86_64 esp rootfs-mockfs rootfs-hfs grubEfi newfs_hfs xpwn;
           default = pkgs.runCommand "xnu-all" {} ''
             mkdir -p $out/arm64 $out/x86_64
             cp -R ${xnu-arm64}/* $out/arm64/

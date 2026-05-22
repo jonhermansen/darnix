@@ -21,7 +21,6 @@ static void sys_exit(int status) {
 static unsigned long slen(const char *s) { unsigned long n=0; while(s[n])n++; return n; }
 static void print(const char *m) { sys_write(1,m,slen(m)); }
 void _start(void) {
-	/* fd 0/1/2 opened by kernel; try /dev/console as fallback */
 	sys_open("/dev/console", 2 /* O_RDWR */);
 	sys_dup2(0, 1);
 	sys_dup2(0, 2);
