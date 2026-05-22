@@ -7,7 +7,7 @@
 ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚═╝  ╚═╝
 ```
 
-[![asciicast](https://asciinema.org/a/WDhkrSzRuGa8vVdn.svg)](https://asciinema.org/a/WDhkrSzRuGa8vVdn)
+[![asciicast](https://asciinema.org/a/x8zs3trLhU2pzZNp.svg)](https://asciinema.org/a/x8zs3trLhU2pzZNp)
 
 Boot a fully open-source Darwin system using Nix. One command, no macOS install required (beyond the build host).
 
