@@ -1,47 +1,44 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DWELL=${DWELL:-8}
+DURATION=${DURATION:-30}
 OUTPUT=${1:-darnix-boot.cast}
-SERIAL_LOG="/tmp/puredarwin-serial.log"
 
-type_slow() {
-  local text="$1" delay="${2:-0.05}"
-  for ((i=0; i<${#text}; i++)); do
-    printf '%s' "${text:$i:1}"
-    sleep "$delay"
-  done
-}
+DEMO_SCRIPT=$(mktemp)
+trap "rm -f $DEMO_SCRIPT" EXIT
 
-run_demo() {
-  printf '\n\033[1;32m$\033[0m '
-  type_slow "nix run"
-  sleep 0.5
-  printf '\n\n'
+cat > "$DEMO_SCRIPT" << 'DEMO'
+#!/usr/bin/env bash
+set -euo pipefail
 
-  rm -f "$SERIAL_LOG"
-  nix run .# 2>&1 &
-  local qemu_pid=$!
+SERIAL_LOG="/tmp/darnix-serial.log"
 
-  # Wait for the banner to appear in serial output, then dwell and exit clean
-  while ! grep -q "Hello from Nix" "$SERIAL_LOG" 2>/dev/null; do
-    sleep 0.2
-    if ! kill -0 "$qemu_pid" 2>/dev/null; then break; fi
-  done
+printf '\n\033[1;32m$\033[0m '
+for ((i=0; i<${#CMD}; i++)); do
+  printf '%s' "${CMD:$i:1}"
+  sleep 0.05
+done
+sleep 0.5
+printf '\n\n'
 
-  sleep "$DWELL"
-  kill "$qemu_pid" 2>/dev/null || true
-  wait "$qemu_pid" 2>/dev/null || true
-}
+rm -f "$SERIAL_LOG"
+nix run .# 2>/dev/null &
+qemu_pid=$!
+trap "kill $qemu_pid 2>/dev/null; wait $qemu_pid 2>/dev/null" EXIT
 
-echo "Recording to $OUTPUT (dwell=${DWELL}s after banner)"
+sleep "$DURATION"
+DEMO
+
+chmod +x "$DEMO_SCRIPT"
+
+echo "Recording to $OUTPUT (duration=${DURATION}s)"
 echo "Pre-build first:  nix build .#esp"
 echo ""
 
-asciinema rec \
-  --command "bash -c '$(declare -f type_slow); SERIAL_LOG=$SERIAL_LOG DWELL=$DWELL $(declare -f run_demo); run_demo'" \
-  --title "Darnix — XNU booted from Nix" \
-  --cols 100 --rows 40 \
+CMD="nix run github:jonhermansen/darnix" DURATION="$DURATION" asciinema rec \
+  --command "$DEMO_SCRIPT" \
+  --title "Darnix — Darwin system built with Nix" \
+  --window-size 100x30 \
   "$OUTPUT"
 
 echo ""

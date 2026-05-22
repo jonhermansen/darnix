@@ -1,14 +1,15 @@
-# Darnix
+```
+██████╗  █████╗ ██████╗ ███╗   ██╗██╗██╗  ██╗
+██╔══██╗██╔══██╗██╔══██╗████╗  ██║██║╚██╗██╔╝
+██║  ██║███████║██████╔╝██╔██╗ ██║██║ ╚███╔╝
+██║  ██║██╔══██║██╔══██╗██║╚██╗██║██║ ██╔██╗
+██████╔╝██║  ██║██║  ██║██║ ╚████║██║██╔╝ ██╗
+╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚═╝  ╚═╝
+```
+
+[![asciicast](https://asciinema.org/a/WDhkrSzRuGa8vVdn.svg)](https://asciinema.org/a/WDhkrSzRuGa8vVdn)
 
 Boot a fully open-source Darwin system using Nix. One command, no macOS install required (beyond the build host).
-
-```
- ____    _    ____  _   _ _____  __
-|  _ \  / \  |  _ \| \ | |_ _\ \/ /
-| | | |/ _ \ | |_) |  \| || | \  /
-| |_| / ___ \|  _ <| |\  || | /  \
-|____/_/   \_\_| \_\_| \_|___/_/\_\
-```
 
 ```
 $ nix run github:jonhermansen/darnix
@@ -143,3 +144,7 @@ nix build .#xnu-x86_64
 - [PureDarwin](https://www.puredarwin.org/) — the original vision
 - [NixThePlanet](https://github.com/MatthewCroughan/NixThePlanet) — Nix-based OS virtualization
 - [kernelshaman](https://kernelshaman.blogspot.com/2021/02/building-xnu-for-macos-112-intel-apple.html)
+
+## Legal
+
+Darnix is an independent project and is not affiliated with, endorsed by, or sponsored by Apple Inc. Apple, macOS, and related trademarks are the property of Apple Inc., registered in the U.S. and other countries. Darwin is licensed under the Apple Public Source License (APSL). All other trademarks are the property of their respective owners.

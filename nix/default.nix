@@ -368,7 +368,7 @@ BOOTARGS_EOF
   initBin = pkgs.runCommand "darnix-init" {
     nativeBuildInputs = [ pkgs.stdenv.cc ];
   } ''
-    clang -target x86_64-apple-macos10.15 -arch x86_64 \
+    clang -target x86_64-apple-macos10.15 -arch x86_64 -fno-builtin \
         -nostdlib -static -Wl,-e,__start -Wl,-adhoc_codesign -o init ${./init.c}
     mkdir -p $out
     cp init $out/init
