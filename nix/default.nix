@@ -256,8 +256,69 @@ let
       sed -i 's|^\(\t.*\)install \$(DATA_INSTALL_FLAGS)|\1$(INSTALL) $(DATA_INSTALL_FLAGS)|' \
         xnu/libkern/libkern/Makefile
 
-      sed -i '/^LEXT(_start)/{n;s/ARM64_PROLOG/brk\t#0\n\tARM64_PROLOG/}' \
-        xnu/osfmk/arm64/start.s
+      ${pkgs.lib.optionalString (arch == "X86_64") ''
+        sed -i '/^LEXT(_start)/{n;s/ARM64_PROLOG/brk\t#0\n\tARM64_PROLOG/}' \
+          xnu/osfmk/arm64/start.s
+      ''}
+
+      # Enable nos_arm_asm so assembly/low-level source files compile
+      # from source instead of using KDK prebuilt objects.
+      # nos_arm_pmap is NOT enabled — pmap.c depends on internal Apple
+      # headers that aren't in the open-source release.
+      sed -i 's/config_darkboot ARM_EXTRAS_BASE/config_darkboot nos_arm_asm ARM_EXTRAS_BASE/' \
+        xnu/config/MASTER.arm64.MacOSX
+
+      # Provide empty headers for Apple-internal directories
+      # that don't exist in the open-source release
+      mkdir -p xnu/osfmk/arm64/tunables xnu/osfmk/arm64/ppl
+
+      # tunables.s: per-SoC register tuning applied at boot.
+      # VMAPPLE has no SoC tunables — APPLY_TUNABLES is a no-op.
+      cat > xnu/osfmk/arm64/tunables/tunables.s << 'TUNABLES_EOF'
+.macro APPLY_TUNABLES
+.endmacro
+TUNABLES_EOF
+
+      # ppl/sart.h and ppl/uat.h: PPL hardware driver headers.
+      # Empty for VMAPPLE — no SART or UAT hardware.
+      echo '/* no SART on VMAPPLE */' > xnu/osfmk/arm64/ppl/sart.h
+      echo '/* no UAT on VMAPPLE */' > xnu/osfmk/arm64/ppl/uat.h
+
+      # Append Apple-internal cache routines missing from open-source release.
+      # These are dcache clean loops called with preemption already disabled.
+      cat >> xnu/osfmk/arm64/caches_asm.s << 'CACHES_EOF'
+
+	.text
+	.align 2
+	.globl EXT(CleanPoC_DcacheRegion_Force_nopreempt)
+LEXT(CleanPoC_DcacheRegion_Force_nopreempt)
+	dsb		sy
+	CLEANPOC_DCACHEREGION
+	dsb		sy
+	ret
+
+	.text
+	.align 2
+	.globl EXT(CleanPoC_DcacheRegion_Force_nopreempt_nohid)
+LEXT(CleanPoC_DcacheRegion_Force_nopreempt_nohid)
+	dsb		sy
+	CLEANPOC_DCACHEREGION
+	dsb		sy
+	ret
+CACHES_EOF
+
+      # Remove conf/files entries for closed-source AMCC/CTRR files
+      # (source not in Apple's open-source release; CTRR disabled for QEMU)
+      sed -i '/amcc_rorgn_ppl\.c\|amcc_rorgn_ppl_amcc\.c\|amcc_rorgn_common\.c\|amcc_rorgn_pv_ctrr\.c/d' \
+        xnu/osfmk/conf/files.arm64
+
+      # Virtual platform implementations for symbols that have no
+      # open-source equivalent (hardware doesn't exist on QEMU -M virt)
+      cat > xnu/osfmk/arm64/vmapple_platform.c << 'VMPLAT_EOF'
+#include <mach/vm_types.h>
+vm_offset_t ctrr_test_page;
+VMPLAT_EOF
+      echo 'osfmk/arm64/vmapple_platform.c standard' >> xnu/osfmk/conf/files.arm64
 
       cat > xnu/pexpert/arm/pe_bootargs.c << 'BOOTARGS_EOF'
 #include <pexpert/pexpert.h>
@@ -304,7 +365,23 @@ BOOTARGS_EOF
 
     buildPhase = ''
       export DEVELOPER_DIR=${xcode}/Xcode.app/Contents/Developer
-      export KDKROOT=${kdk}/KDK_26.4.1_25E253.kdk
+      # Trimmed KDK: keep headers + pmap objects, remove objects we compile from source.
+      export KDKROOT=$TMPDIR/kdk-trimmed
+      cp -R ${kdk}/KDK_26.4.1_25E253.kdk/. $KDKROOT/
+      chmod -R u+w $KDKROOT/System/Library/KernelSupport/
+
+      # Remove nos_arm_asm objects from the archive so our source-compiled
+      # versions are used instead (they pick up our VMAPPLE.h changes).
+      cd $TMPDIR
+      mkdir kdk-repack && cd kdk-repack
+      ${pkgs.darwin.cctools}/bin/ar x $KDKROOT/System/Library/KernelSupport/lib${machine}.os.${kernelConfig}.a
+      rm -f start.o locore.o cswitch.o pcb.o pinst.o caches_asm.o \
+            gxf_exceptions.o machine_routines_asm.o machine_routines_apple.o \
+            iofilter.o iofilter_asm.o
+      rm $KDKROOT/System/Library/KernelSupport/lib${machine}.os.${kernelConfig}.a
+      ${pkgs.darwin.cctools}/bin/ar rcs $KDKROOT/System/Library/KernelSupport/lib${machine}.os.${kernelConfig}.a *.o *.cpo 2>/dev/null || \
+      ${pkgs.darwin.cctools}/bin/ar rcs $KDKROOT/System/Library/KernelSupport/lib${machine}.os.${kernelConfig}.a *.o
+      cd $NIX_BUILD_TOP/source
       export NIX_LIBSYSTEM_PATH=${xcode}/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr
       unset SDKROOT NIX_CFLAGS_COMPILE NIX_LDFLAGS
       export EXTRA_PATH="${pkgs.lib.makeBinPath buildTools}"
@@ -481,17 +558,92 @@ GRUBEOF
         -no-reboot
   '';
 
+  arm64-boot = let
+    # kernel_phys must have the same offset within a 32MB block as the Mach-O
+    # __TEXT vmaddr (0xfffffe0007004000 & 0x1FFFFFF = 0x1004000), because
+    # start.s maps with L2 block entries (32MB granularity on 16K pages).
+    kernel_phys = "0x41004000";
+    stub_phys   = "0x48000000";
+    args_phys   = "0x44000000";
+    mem_size    = "0x40000000";
+  in pkgs.runCommand "darnix-arm64-boot" {
+    nativeBuildInputs = [ pkgs.python3 pkgs.darwin.cctools pkgs.stdenv.cc ];
+  } ''
+    mkdir -p $out
+    kernel=${xnu-arm64}/DEVELOPMENT_ARM64_VMAPPLE/kernel.development.vmapple
+
+    python3 ${./macho2bin.py} "$kernel" $out
+    ENTRY_OFF=$(cat $out/entry_offset)
+    VIRT_BASE=$(cat $out/virt_base)
+    BIN_SIZE=$(cat $out/bin_size)
+
+    KERNEL_ENTRY=$(printf "0x%x" $(( ${kernel_phys} + ENTRY_OFF )))
+    TOP_OF_KERNEL_DATA=$(printf "0x%x" $(( (${kernel_phys} + BIN_SIZE + 0x3FFFFF) & ~0x3FFFFF )))
+
+    clang -E -P -x assembler-with-cpp \
+      -DKERNEL_ENTRY=$KERNEL_ENTRY \
+      -DVIRT_BASE=$VIRT_BASE \
+      -DKERNEL_PHYS=${kernel_phys} \
+      -DARGS_PHYS=${args_phys} \
+      -DMEM_SIZE=${mem_size} \
+      -DTOP_OF_KERNEL_DATA=$TOP_OF_KERNEL_DATA \
+      ${./stub.s} -o stub_pp.s
+
+    as -arch arm64 -o stub.o stub_pp.s
+    ld -arch arm64 -e _start -static -pagezero_size 0 -image_base ${stub_phys} -o stub stub.o
+    segedit stub -extract __TEXT __text $out/stub.bin
+
+    echo "${kernel_phys}" > $out/kernel_phys
+    echo "${stub_phys}" > $out/stub_phys
+  '';
+
+  run-vm-arm64 = pkgs.writeShellScriptBin "darnix-vm-arm64" ''
+    set -euo pipefail
+
+    KERNEL_PHYS=$(cat ${arm64-boot}/kernel_phys)
+    STUB_PHYS=$(cat ${arm64-boot}/stub_phys)
+
+    GDB_ARG=""
+    for arg in "$@"; do
+      case "$arg" in
+        --gdb)    GDB_ARG="-s -S"
+                  echo "GDB on :1234"
+                  echo "symbol-file ${xnu-arm64}/DEVELOPMENT_ARM64_VMAPPLE/kernel.development.vmapple" ;;
+      esac
+    done
+
+    exec ${pkgs.qemu}/bin/qemu-system-aarch64 \
+        -M virt,highmem=on -accel hvf -cpu host \
+        -m 2G -nographic \
+        -device loader,file=${arm64-boot}/stub.bin,addr=$STUB_PHYS,force-raw=on,cpu-num=0 \
+        -device loader,file=${arm64-boot}/kernel.bin,addr=$KERNEL_PHYS,force-raw=on \
+        $GDB_ARG \
+        -no-reboot
+  '';
+
 in {
   packages = {
-    inherit xcode kdk xnu-arm64 xnu-x86_64 esp rootfs-mockfs rootfs-hfs grubEfi newfs_hfs xpwn;
+    inherit xcode kdk xnu-arm64 xnu-x86_64 esp rootfs-mockfs rootfs-hfs grubEfi newfs_hfs xpwn arm64-boot;
     default = pkgs.runCommand "xnu-all" {} ''
       mkdir -p $out/arm64 $out/x86_64
       cp -R ${xnu-arm64}/* $out/arm64/
       cp -R ${xnu-x86_64}/* $out/x86_64/
     '';
   };
-  apps.default = {
-    type = "app";
-    program = "${run-vm}/bin/darnix-vm";
+  apps = {
+    default = {
+      type = "app";
+      program = if system == "aarch64-darwin"
+        then "${run-vm-arm64}/bin/darnix-vm-arm64"
+        else "${run-vm}/bin/darnix-vm";
+    };
+    x86 = {
+      type = "app";
+      program = "${run-vm}/bin/darnix-vm";
+    };
+    arm64 = {
+      type = "app";
+      program = "${run-vm-arm64}/bin/darnix-vm-arm64";
+    };
   };
 }
