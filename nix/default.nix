@@ -661,7 +661,7 @@ DBEOF
         -drive "file=$WORKDIR/root.img,if=pflash,format=raw"
         -device "loader,file=${boot}/kernel.bin,addr=$KERNEL_PHYS,force-raw=on"
         -device "loader,file=${boot}/adt.bin,addr=$ADT_PHYS,force-raw=on"
-        -no-reboot
+        -s -no-reboot
       )
     '' else ''
       QEMU_BIN=${qemu}/bin/qemu-system-x86_64
@@ -673,7 +673,7 @@ DBEOF
         -drive "file=${boot}/esp.img,format=raw,if=virtio,readonly=on"
         $SERIAL_ARG
         -display none -monitor none
-        -no-reboot
+        -s -no-reboot
       )
     '';
 
@@ -709,7 +709,7 @@ DBEOF
       ${qemuArgsDef}
 
       if [ "$DEBUG" -eq 1 ]; then
-        QEMU_ARGS+=(-s -S)
+        QEMU_ARGS+=(-S)
         "$QEMU_BIN" "''${QEMU_ARGS[@]}" &
         QEMU_PID=$!
         trap "kill $QEMU_PID 2>/dev/null; rm -rf $WORKDIR" EXIT INT TERM
