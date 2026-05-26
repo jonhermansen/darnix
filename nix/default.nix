@@ -1,17 +1,40 @@
-{ pkgs, inputs, system, buildScriptSrc }:
+{ pkgs, inputs, system, buildScriptSrc, qemu }:
 
+# Three independent version axes:
+#
+#   1. Xcode (toolchain) — compiler, linker, SDK headers.
+#      Forward-compatible: newer Xcode builds older kernel source.
+#      Update: xcodeXip, xcode derivation name, xcrun --show-sdk-version.
+#
+#   2. macOS target — the OS release the kernel source is from.
+#      Update: sw_vers shim (productVersion, buildVersion), MACOS_VERSION.
+#
+#   3. XNU source + KDK — kernel source and prebuilt objects. Must match.
+#      Update: xnu version, RC_ProjectSourceVersion, KDK dmg/hash/paths.
+#      These come from apple-oss-distributions and move together.
+#
 let
-  # Xcode .xip — Apple's URL is gated by Developer auth.
+  # -- Version pins (see comment above for update rules) --
+  xcodeVersion    = "26.4.1";
+  xcodeHash       = "sha256-ydLjr+g/1V9TuzXvJZdBNR8zJ9HxGj9KX7kNXCONtKI=";
+  macosVersion    = "26.4";
+  macosBuild      = "25E253";
+  xnuVersion      = "12377.101.15";
+  kdkVersion      = "26.4.1";
+  kdkHash         = "sha256-23nDOhApwoNTIq0jpJVJSeHAL52WhuwKnBJuYpqzA/M=";
+
+  kdkName = "KDK_${kdkVersion}_${macosBuild}.kdk";
+
   xcodeXip = pkgs.requireFile {
-    name = "Xcode_26.4.1_Apple_silicon.xip";
-    hash = "sha256-ydLjr+g/1V9TuzXvJZdBNR8zJ9HxGj9KX7kNXCONtKI=";
-    url = "https://download.developer.apple.com/Developer_Tools/Xcode_26.4.1/Xcode_26.4.1_Apple_silicon.xip";
+    name = "Xcode_${xcodeVersion}_Apple_silicon.xip";
+    hash = xcodeHash;
+    url = "https://download.developer.apple.com/Developer_Tools/Xcode_${xcodeVersion}/Xcode_${xcodeVersion}_Apple_silicon.xip";
   };
 
   kdkDmg = pkgs.requireFile {
-    name = "Kernel_Debug_Kit_26.4.1_build_25E253.dmg";
-    url = "https://download.developer.apple.com/macOS/Kernal_Debug_Kit_26.4.1_build_25E253/Kernel_Debug_Kit_26.4.1_build_25E253.dmg";
-    hash = "sha256-23nDOhApwoNTIq0jpJVJSeHAL52WhuwKnBJuYpqzA/M=";
+    name = "Kernel_Debug_Kit_${kdkVersion}_build_${macosBuild}.dmg";
+    url = "https://download.developer.apple.com/macOS/Kernal_Debug_Kit_${kdkVersion}_build_${macosBuild}/Kernel_Debug_Kit_${kdkVersion}_build_${macosBuild}.dmg";
+    hash = kdkHash;
   };
 
   xcrunShim = pkgs.writeShellScriptBin "xcrun" ''
@@ -33,7 +56,7 @@ let
         -toolchain|--toolchain) shift 2 ;;
         -f|-find|--find)                            shift; find_tool "$1"; exit $? ;;
         --show-sdk-path|-show-sdk-path)             echo "$DEVELOPER_DIR/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"; exit 0 ;;
-        --show-sdk-version|-show-sdk-version)       echo "26.4"; exit 0 ;;
+        --show-sdk-version|-show-sdk-version)       echo "${macosVersion}"; exit 0 ;;
         --show-sdk-platform-path|-show-sdk-platform-path) echo "$DEVELOPER_DIR/Platforms/MacOSX.platform"; exit 0 ;;
         -*)                     shift ;;
         *)                      break ;;
@@ -89,9 +112,9 @@ let
   swVersShim = pkgs.writeShellScriptBin "sw_vers" ''
     case "$1" in
       -productName|--productName)       echo "macOS" ;;
-      -productVersion|--productVersion) echo "26.4" ;;
-      -buildVersion|--buildVersion)     echo "25E253" ;;
-      *) echo "ProductName: macOS"; echo "ProductVersion: 26.4"; echo "BuildVersion: 25E253" ;;
+      -productVersion|--productVersion) echo "${macosVersion}" ;;
+      -buildVersion|--buildVersion)     echo "${macosBuild}" ;;
+      *) echo "ProductName: macOS"; echo "ProductVersion: ${macosVersion}"; echo "BuildVersion: ${macosBuild}" ;;
     esac
   '';
 
@@ -103,7 +126,7 @@ let
     esac
   '';
 
-  xcode = pkgs.runCommand "xcode-26.4.1" {
+  xcode = pkgs.runCommand "xcode-${xcodeVersion}" {
     nativeBuildInputs = [ pkgs.xar pkgs.pbzx pkgs.cpio ];
   } ''
     xar -xf ${xcodeXip}
@@ -112,14 +135,14 @@ let
     mv Xcode.app $out/
   '';
 
-  kdk = pkgs.runCommand "kdk-26.4.1-25E253" {
+  kdk = pkgs.runCommand "kdk-${kdkVersion}-${macosBuild}" {
     nativeBuildInputs = [ pkgs.p7zip pkgs.xar pkgs.cpio pkgs.pbzx ];
   } ''
     7z x ${kdkDmg}
     xar -xf "Kernel Debug Kit/KernelDebugKit.pkg"
-    mkdir -p $out/KDK_26.4.1_25E253.kdk
-    (cd $out/KDK_26.4.1_25E253.kdk && pbzx -n $NIX_BUILD_TOP/KDK.pkg/Payload     | cpio -i)
-    (cd $out/KDK_26.4.1_25E253.kdk && pbzx -n $NIX_BUILD_TOP/KDK_SDK.pkg/Payload | cpio -i)
+    mkdir -p $out/${kdkName}
+    (cd $out/${kdkName} && pbzx -n $NIX_BUILD_TOP/KDK.pkg/Payload     | cpio -i)
+    (cd $out/${kdkName} && pbzx -n $NIX_BUILD_TOP/KDK_SDK.pkg/Payload | cpio -i)
   '';
 
   ctftools = pkgs.stdenv.mkDerivation {
@@ -173,7 +196,8 @@ let
 
   withLTO = true;
 
-  mkXnu = { arch, machine, label, kernelConfig ? "DEVELOPMENT" }: let
+  mkXnu = { arch, machine, kernelConfig ? "DEVELOPMENT" }: let
+    label = pkgs.lib.toLower "${kernelConfig}-${arch}-${machine}";
     buildTools = with pkgs; [
       jq git cmake ninja gnumake
       gnugrep gnused gawk gnupatch coreutils curl which findutils gzip pax rcodesign
@@ -183,7 +207,7 @@ let
     ];
   in pkgs.stdenvNoCC.mkDerivation {
     pname   = "xnu-${label}";
-    version = "12377.101.15";
+    version = xnuVersion;
     src = buildScriptSrc;
 
     nativeBuildInputs = buildTools;
@@ -239,6 +263,10 @@ let
         -e 's|/usr/bin/plutil|${plutilShim}/bin/plutil|g' \
         xnu/Makefile xnu/makedefs/MakeInc.cmd xnu/makedefs/MakeInc.def xnu/makedefs/MakeInc.rule xnu/makedefs/MakeInc.top
 
+      # Force C preprocessing on .s files so #if/#include directives work
+      sed -i 's|^SFLAGS_GEN = -D__ASSEMBLER__|SFLAGS_GEN = -x assembler-with-cpp -D__ASSEMBLER__|' \
+        xnu/makedefs/MakeInc.def
+
       sed -i 's|^\(\t.*\)install \$(DATA_INSTALL_FLAGS)|\1$(INSTALL) $(DATA_INSTALL_FLAGS)|' \
         xnu/libkern/libkern/Makefile
 
@@ -261,6 +289,7 @@ let
           xnu/osfmk/arm64/start.s
       ''}
 
+      ${pkgs.lib.optionalString (arch == "ARM64") ''
       # Enable nos_arm_asm so assembly/low-level source files compile
       # from source instead of using KDK prebuilt objects.
       # nos_arm_pmap is NOT enabled — pmap.c depends on internal Apple
@@ -319,6 +348,7 @@ CACHES_EOF
 vm_offset_t ctrr_test_page;
 VMPLAT_EOF
       echo 'osfmk/arm64/vmapple_platform.c standard' >> xnu/osfmk/conf/files.arm64
+      ''}
 
       cat > xnu/pexpert/arm/pe_bootargs.c << 'BOOTARGS_EOF'
 #include <pexpert/pexpert.h>
@@ -365,11 +395,11 @@ BOOTARGS_EOF
 
     buildPhase = ''
       export DEVELOPER_DIR=${xcode}/Xcode.app/Contents/Developer
-      # Trimmed KDK: keep headers + pmap objects, remove objects we compile from source.
       export KDKROOT=$TMPDIR/kdk-trimmed
-      cp -R ${kdk}/KDK_26.4.1_25E253.kdk/. $KDKROOT/
+      cp -R ${kdk}/${kdkName}/. $KDKROOT/
       chmod -R u+w $KDKROOT/System/Library/KernelSupport/
 
+      ${pkgs.lib.optionalString (arch == "ARM64") ''
       # Remove nos_arm_asm objects from the archive so our source-compiled
       # versions are used instead (they pick up our VMAPPLE.h changes).
       cd $TMPDIR
@@ -382,6 +412,7 @@ BOOTARGS_EOF
       ${pkgs.darwin.cctools}/bin/ar rcs $KDKROOT/System/Library/KernelSupport/lib${machine}.os.${kernelConfig}.a *.o *.cpo 2>/dev/null || \
       ${pkgs.darwin.cctools}/bin/ar rcs $KDKROOT/System/Library/KernelSupport/lib${machine}.os.${kernelConfig}.a *.o
       cd $NIX_BUILD_TOP/source
+      ''}
       export NIX_LIBSYSTEM_PATH=${xcode}/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr
       unset SDKROOT NIX_CFLAGS_COMPILE NIX_LDFLAGS
       export EXTRA_PATH="${pkgs.lib.makeBinPath buildTools}"
@@ -389,8 +420,8 @@ BOOTARGS_EOF
       export KERNEL_CONFIG=${kernelConfig}
       export ARCH_CONFIG=${arch}
       export MACHINE_CONFIG=${machine}
-      export MACOS_VERSION=26.4
-      export RC_ProjectSourceVersion=12377.101.15
+      export MACOS_VERSION=${macosVersion}
+      export RC_ProjectSourceVersion=${xnuVersion}
       export HOME=$TMPDIR
       export BUILD_LTO=${if withLTO then "1" else "0"}
       bash ./build.sh
@@ -402,8 +433,8 @@ BOOTARGS_EOF
     '';
   };
 
-  xnu-arm64  = mkXnu { arch = "ARM64";  machine = "VMAPPLE"; label = "arm64-vmapple"; };
-  xnu-x86_64 = mkXnu { arch = "X86_64"; machine = "NONE";    label = "x86_64";        };
+  xnu-arm64  = mkXnu { arch = "ARM64";  machine = "VMAPPLE"; };
+  xnu-x86_64 = mkXnu { arch = "X86_64"; machine = "NONE";    };
 
   grubEfi = inputs.grub-src.packages.${system}.efi-x86_64;
 
@@ -469,12 +500,96 @@ BOOTARGS_EOF
     cp rootfs.dmg $out/rootfs.dmg
   '';
 
-  esp = pkgs.runCommand "darnix-esp" {
-    nativeBuildInputs = [ pkgs.dosfstools pkgs.mtools ];
-  } ''
-    kernel=${xnu-x86_64}/DEVELOPMENT_X86_64/kernel.development
+  ramBytes = 4 * 1024 * 1024 * 1024;
 
-    cat > grub.cfg << 'GRUBEOF'
+  # mkTarget { arch, kernelConfig } → { kernel, boot, run }
+  #
+  # Produces a complete target: kernel build, boot artifacts (firmware/ESP +
+  # debug scripts), and a runner that supports --gdb (launches lldb with
+  # symbols, VA→PA translation, and klog).
+  mkTarget = { arch, kernelConfig ? "DEVELOPMENT" }: let
+    machine = if arch == "ARM64" then "VMAPPLE" else "NONE";
+    lc = pkgs.lib.toLower;
+    kernel = mkXnu { inherit arch machine kernelConfig; };
+    kernelDir = "${kernelConfig}_${arch}"
+      + pkgs.lib.optionalString (machine != "NONE") "_${machine}";
+    kernelFile = "kernel.${lc kernelConfig}"
+      + pkgs.lib.optionalString (machine != "NONE") ".${lc machine}";
+    kernelPath = "${kernel}/${kernelDir}/${kernelFile}";
+    shortLabel = lc arch
+      + pkgs.lib.optionalString (kernelConfig != "DEVELOPMENT")
+          ("-" + lc kernelConfig);
+
+    boot = if arch == "ARM64" then arm64Boot else x86Boot;
+
+    # ── ARM64 boot: stub firmware + flat kernel + ADT + debug harness ──
+    arm64Boot = let
+      # vmapple memory map: RAM at 0x70000000, firmware at 0x100000.
+      # kernel_phys must have the same offset within a 32MB block as the
+      # Mach-O __TEXT vmaddr, because start.s maps with L2 block entries.
+      dram_base   = "0x70000000";
+      kernel_phys = "0x71004000";
+      fw_phys     = "0x00100000";
+      args_phys   = "0x78000000";
+      adt_phys    = "0x78010000";
+      uart_base   = "0x20010000";
+      mem_size    = "0x${pkgs.lib.toHexString ramBytes}";
+    in pkgs.runCommand "darnix-boot-${shortLabel}" {
+      nativeBuildInputs = [ pkgs.python3 pkgs.darwin.cctools pkgs.stdenv.cc ];
+    } ''
+      mkdir -p $out
+      KERNEL_FILE=${kernelPath}
+
+      python3 ${./macho2bin.py} "$KERNEL_FILE" $out
+      python3 ${./mkadt.py} ${dram_base} ${mem_size} > $out/adt.bin
+      ADT_SIZE=$(wc -c < $out/adt.bin)
+
+      ENTRY_OFF=$(cat $out/entry_offset)
+      VIRT_BASE=$(cat $out/virt_base)
+      BIN_SIZE=$(cat $out/bin_size)
+
+      KERNEL_ENTRY=$(printf "0x%x" $(( ${kernel_phys} + ENTRY_OFF )))
+      ADT_END=$(( ${adt_phys} + ADT_SIZE ))
+      KERNEL_END=$(( ${kernel_phys} + BIN_SIZE ))
+      HIGHEST=$(( ADT_END > KERNEL_END ? ADT_END : KERNEL_END ))
+      TOP_OF_KERNEL_DATA=$(printf "0x%x" $(( (HIGHEST + 0x3FFFFF) & ~0x3FFFFF )))
+
+      clang -E -P -x assembler-with-cpp \
+        -DKERNEL_ENTRY=$KERNEL_ENTRY \
+        -DVIRT_BASE=$VIRT_BASE \
+        -DKERNEL_PHYS=${kernel_phys} \
+        -DARGS_PHYS=${args_phys} \
+        -DADT_PHYS=${adt_phys} \
+        -DADT_SIZE=$ADT_SIZE \
+        -DMEM_SIZE=${mem_size} \
+        -DTOP_OF_KERNEL_DATA=$TOP_OF_KERNEL_DATA \
+        -DUART_BASE=${uart_base} \
+        ${./stub.s} -o stub_pp.s
+
+      as -arch arm64 -o stub.o stub_pp.s
+      ld -arch arm64 -e _start -static -pagezero_size 0 -image_base ${fw_phys} -o stub stub.o
+      segedit stub -extract __TEXT __text $out/fw.bin
+
+      echo "${kernel_phys}" > $out/kernel_phys
+      echo "${adt_phys}" > $out/adt_phys
+
+      cat > $out/debug.lldb << DBEOF
+target create $KERNEL_FILE
+command script import ${./klog.py}
+settings set plugin.process.gdb-remote.packet-timeout 10
+gdb-remote localhost:1234
+breakpoint set -a $KERNEL_ENTRY -N kernel_entry
+klog $VIRT_BASE ${kernel_phys}
+DBEOF
+    '';
+
+    # ── X86_64 boot: GRUB EFI image + debug script ──
+    x86Boot = pkgs.runCommand "darnix-boot-${shortLabel}" {
+      nativeBuildInputs = [ pkgs.dosfstools pkgs.mtools ];
+    } ''
+      KERNEL_FILE=${kernelPath}
+
+      cat > grub.cfg << 'GRUBEOF'
 set timeout=5
 set default=0
 menuentry "Darnix (HFS+)" {
@@ -491,159 +606,157 @@ menuentry "Darnix (mockfs)" {
 }
 GRUBEOF
 
-    KEXT_ARGS=()
-    while IFS= read -r -d "" f; do
-      rel="''${f#${xnu-x86_64}/DEVELOPMENT_X86_64/}"
-      KEXT_ARGS+=("boot/$rel=$f")
-    done < <(find ${xnu-x86_64}/DEVELOPMENT_X86_64/System.kext -type f -print0)
+      KEXT_ARGS=()
+      while IFS= read -r -d "" f; do
+        rel="''${f#${kernel}/${kernelDir}/}"
+        KEXT_ARGS+=("boot/$rel=$f")
+      done < <(find ${kernel}/${kernelDir}/System.kext -type f -print0)
 
-    ${grubEfi}/bin/grub-mkstandalone \
-        --format=x86_64-efi \
-        --output=BOOTX64.EFI \
-        --modules="xnu xnu_uuid part_gpt part_msdos fat hfsplus normal boot configfile" \
-        "boot/grub/grub.cfg=grub.cfg" \
-        "boot/kernel=$kernel" \
-        "boot/rootfs-hfs.dmg=${rootfs-hfs}/rootfs.dmg" \
-        "boot/rootfs-mockfs.dmg=${rootfs-mockfs}/rootfs.dmg" \
-        "''${KEXT_ARGS[@]}"
+      ${grubEfi}/bin/grub-mkstandalone \
+          --format=x86_64-efi \
+          --output=BOOTX64.EFI \
+          --modules="xnu xnu_uuid part_gpt part_msdos fat hfsplus normal boot configfile" \
+          "boot/grub/grub.cfg=grub.cfg" \
+          "boot/kernel=$KERNEL_FILE" \
+          "boot/rootfs-hfs.dmg=${rootfs-hfs}/rootfs.dmg" \
+          "boot/rootfs-mockfs.dmg=${rootfs-mockfs}/rootfs.dmg" \
+          "''${KEXT_ARGS[@]}"
 
-    mkfs.fat -C -F 32 esp.img 65536 >/dev/null
-    mmd -i esp.img ::/EFI ::/EFI/BOOT
-    mcopy -i esp.img BOOTX64.EFI ::/EFI/BOOT/BOOTX64.EFI
+      mkfs.fat -C -F 32 esp.img 65536 >/dev/null
+      mmd -i esp.img ::/EFI ::/EFI/BOOT
+      mcopy -i esp.img BOOTX64.EFI ::/EFI/BOOT/BOOTX64.EFI
 
-    mkdir -p $out
-    cp esp.img $out/esp.img
-    cp $kernel $out/kernel.development
-  '';
+      mkdir -p $out
+      cp esp.img $out/esp.img
+      cp $KERNEL_FILE $out/${kernelFile}
 
-  run-vm = pkgs.writeShellScriptBin "darnix-vm" ''
-    set -euo pipefail
-    WORKDIR=$(mktemp -d)
-    trap "rm -rf $WORKDIR" EXIT
+      cat > $out/debug.lldb << DBEOF
+target create $out/${kernelFile}
+command script import ${./klog.py}
+settings set plugin.process.gdb-remote.packet-timeout 10
+gdb-remote localhost:1234
+klog
+DBEOF
+    '';
 
-    QEMU=${pkgs.qemu}
-    OVMF="$QEMU/share/qemu/edk2-x86_64-code.fd"
-    OVMF_VARS="$QEMU/share/qemu/edk2-i386-vars.fd"
+    # ── Arch-specific fragments for the shared run script ──
+    bootSetup = if arch == "ARM64" then ''
+      KERNEL_PHYS=$(cat ${boot}/kernel_phys)
+      ADT_PHYS=$(cat ${boot}/adt_phys)
+      dd if=/dev/zero of="$WORKDIR/aux.img" bs=1M count=1 2>/dev/null
+      dd if=/dev/zero of="$WORKDIR/root.img" bs=1M count=1 2>/dev/null
+    '' else ''
+      OVMF="${qemu}/share/qemu/edk2-x86_64-code.fd"
+      OVMF_VARS="${qemu}/share/qemu/edk2-i386-vars.fd"
+      cp "$OVMF_VARS" "$WORKDIR/ovmf-vars.fd"
+      chmod u+w "$WORKDIR/ovmf-vars.fd"
+      SERIAL_LOG="/tmp/darnix-serial.log"
+      SERIAL_ARG="-serial file:$SERIAL_LOG"
+    '';
 
-    cp "$OVMF_VARS" "$WORKDIR/ovmf-vars.fd"
-    chmod u+w "$WORKDIR/ovmf-vars.fd"
-
-    SERIAL_LOG="/tmp/darnix-serial.log"
-    SERIAL_ARG="-serial file:$SERIAL_LOG"
-    GDB_ARG=""
-    for arg in "$@"; do
-      case "$arg" in
-        --serial) SERIAL_ARG="-serial stdio" ;;
-        --gdb)    GDB_ARG="-s -S"; echo "GDB on :1234 — symbol-file ${esp}/kernel.development" ;;
-      esac
-    done
-
-    if [[ "$SERIAL_ARG" == *"file:"* ]]; then
-      rm -f "$SERIAL_LOG"
-      touch "$SERIAL_LOG"
-      tail -f "$SERIAL_LOG" &
-      TAIL_PID=$!
-      trap "kill $TAIL_PID 2>/dev/null; rm -rf $WORKDIR" INT TERM EXIT
-    fi
-
-    exec "$QEMU/bin/qemu-system-x86_64" \
-        -machine q35 -m 4G -smp 1 \
-        -cpu Haswell-noTSX,vendor=GenuineIntel,stepping=4 \
-        -drive if=pflash,format=raw,readonly=on,file="$OVMF" \
-        -drive if=pflash,format=raw,file="$WORKDIR/ovmf-vars.fd" \
-        -drive file=${esp}/esp.img,format=raw,if=virtio,readonly=on \
-        $SERIAL_ARG \
-        -display none -monitor none \
-        $GDB_ARG \
+    qemuArgsDef = if arch == "ARM64" then ''
+      QEMU_BIN=${qemu}/bin/qemu-system-aarch64
+      QEMU_ARGS=(
+        -M vmapple -accel hvf
+        -m ${toString ramBytes}B -nographic
+        -bios ${boot}/fw.bin
+        -pflash "$WORKDIR/aux.img"
+        -drive "file=$WORKDIR/root.img,if=pflash,format=raw"
+        -device "loader,file=${boot}/kernel.bin,addr=$KERNEL_PHYS,force-raw=on"
+        -device "loader,file=${boot}/adt.bin,addr=$ADT_PHYS,force-raw=on"
         -no-reboot
-  '';
-
-  arm64-boot = let
-    # kernel_phys must have the same offset within a 32MB block as the Mach-O
-    # __TEXT vmaddr (0xfffffe0007004000 & 0x1FFFFFF = 0x1004000), because
-    # start.s maps with L2 block entries (32MB granularity on 16K pages).
-    kernel_phys = "0x41004000";
-    stub_phys   = "0x48000000";
-    args_phys   = "0x44000000";
-    mem_size    = "0x40000000";
-  in pkgs.runCommand "darnix-arm64-boot" {
-    nativeBuildInputs = [ pkgs.python3 pkgs.darwin.cctools pkgs.stdenv.cc ];
-  } ''
-    mkdir -p $out
-    kernel=${xnu-arm64}/DEVELOPMENT_ARM64_VMAPPLE/kernel.development.vmapple
-
-    python3 ${./macho2bin.py} "$kernel" $out
-    ENTRY_OFF=$(cat $out/entry_offset)
-    VIRT_BASE=$(cat $out/virt_base)
-    BIN_SIZE=$(cat $out/bin_size)
-
-    KERNEL_ENTRY=$(printf "0x%x" $(( ${kernel_phys} + ENTRY_OFF )))
-    TOP_OF_KERNEL_DATA=$(printf "0x%x" $(( (${kernel_phys} + BIN_SIZE + 0x3FFFFF) & ~0x3FFFFF )))
-
-    clang -E -P -x assembler-with-cpp \
-      -DKERNEL_ENTRY=$KERNEL_ENTRY \
-      -DVIRT_BASE=$VIRT_BASE \
-      -DKERNEL_PHYS=${kernel_phys} \
-      -DARGS_PHYS=${args_phys} \
-      -DMEM_SIZE=${mem_size} \
-      -DTOP_OF_KERNEL_DATA=$TOP_OF_KERNEL_DATA \
-      ${./stub.s} -o stub_pp.s
-
-    as -arch arm64 -o stub.o stub_pp.s
-    ld -arch arm64 -e _start -static -pagezero_size 0 -image_base ${stub_phys} -o stub stub.o
-    segedit stub -extract __TEXT __text $out/stub.bin
-
-    echo "${kernel_phys}" > $out/kernel_phys
-    echo "${stub_phys}" > $out/stub_phys
-  '';
-
-  run-vm-arm64 = pkgs.writeShellScriptBin "darnix-vm-arm64" ''
-    set -euo pipefail
-
-    KERNEL_PHYS=$(cat ${arm64-boot}/kernel_phys)
-    STUB_PHYS=$(cat ${arm64-boot}/stub_phys)
-
-    GDB_ARG=""
-    for arg in "$@"; do
-      case "$arg" in
-        --gdb)    GDB_ARG="-s -S"
-                  echo "GDB on :1234"
-                  echo "symbol-file ${xnu-arm64}/DEVELOPMENT_ARM64_VMAPPLE/kernel.development.vmapple" ;;
-      esac
-    done
-
-    exec ${pkgs.qemu}/bin/qemu-system-aarch64 \
-        -M virt,highmem=on -accel hvf -cpu host \
-        -m 2G -nographic \
-        -device loader,file=${arm64-boot}/stub.bin,addr=$STUB_PHYS,force-raw=on,cpu-num=0 \
-        -device loader,file=${arm64-boot}/kernel.bin,addr=$KERNEL_PHYS,force-raw=on \
-        $GDB_ARG \
+      )
+    '' else ''
+      QEMU_BIN=${qemu}/bin/qemu-system-x86_64
+      QEMU_ARGS=(
+        -machine q35 -m ${toString ramBytes}B -smp 1
+        -cpu "Haswell-noTSX,vendor=GenuineIntel,stepping=4"
+        -drive "if=pflash,format=raw,readonly=on,file=$OVMF"
+        -drive "if=pflash,format=raw,file=$WORKDIR/ovmf-vars.fd"
+        -drive "file=${boot}/esp.img,format=raw,if=virtio,readonly=on"
+        $SERIAL_ARG
+        -display none -monitor none
         -no-reboot
-  '';
+      )
+    '';
+
+    preExec = if arch == "X86_64" then ''
+      if [[ "$SERIAL_ARG" == *"file:"* ]]; then
+        rm -f "$SERIAL_LOG"
+        touch "$SERIAL_LOG"
+        tail -f "$SERIAL_LOG" &
+        TAIL_PID=$!
+        trap "kill $TAIL_PID 2>/dev/null; rm -rf $WORKDIR" INT TERM EXIT
+      fi
+    '' else "";
+
+    # ── Runner: shared debug logic, arch-specific QEMU invocation ──
+    run = pkgs.writeShellScriptBin "darnix-run" ''
+      set -euo pipefail
+      WORKDIR=$(mktemp -d)
+      trap "rm -rf $WORKDIR" EXIT
+
+      ${bootSetup}
+
+      DEBUG=0
+      for arg in "$@"; do
+        case "$arg" in
+          --gdb)    DEBUG=1 ;;
+          --serial) SERIAL_ARG="-serial stdio" ;;
+        esac
+      done
+
+      ${if arch == "X86_64" then ''
+      if [ "$DEBUG" -eq 1 ]; then SERIAL_ARG="-serial file:$SERIAL_LOG"; fi
+      '' else ""}
+      ${qemuArgsDef}
+
+      if [ "$DEBUG" -eq 1 ]; then
+        QEMU_ARGS+=(-s -S)
+        "$QEMU_BIN" "''${QEMU_ARGS[@]}" &
+        QEMU_PID=$!
+        trap "kill $QEMU_PID 2>/dev/null; rm -rf $WORKDIR" EXIT INT TERM
+        sleep 0.5
+        lldb -s ${boot}/debug.lldb
+      else
+        ${preExec}
+        exec "$QEMU_BIN" "''${QEMU_ARGS[@]}"
+      fi
+    '';
+
+  in { inherit kernel boot run; };
+
+  targets = {
+    arm64  = mkTarget { arch = "ARM64"; };
+    x86_64 = mkTarget { arch = "X86_64"; };
+  };
 
 in {
   packages = {
-    inherit xcode kdk xnu-arm64 xnu-x86_64 esp rootfs-mockfs rootfs-hfs grubEfi newfs_hfs xpwn arm64-boot;
-    default = pkgs.runCommand "xnu-all" {} ''
-      mkdir -p $out/arm64 $out/x86_64
-      cp -R ${xnu-arm64}/* $out/arm64/
-      cp -R ${xnu-x86_64}/* $out/x86_64/
-    '';
+    inherit xcode kdk qemu grubEfi newfs_hfs xpwn;
+    inherit rootfs-mockfs rootfs-hfs;
+    xnu-arm64  = targets.arm64.kernel;
+    xnu-x86_64 = targets.x86_64.kernel;
+    boot-arm64  = targets.arm64.boot;
+    boot-x86_64 = targets.x86_64.boot;
+    run-arm64  = targets.arm64.run;
+    run-x86_64 = targets.x86_64.run;
+    default = targets.arm64.run;
   };
   apps = {
     default = {
       type = "app";
       program = if system == "aarch64-darwin"
-        then "${run-vm-arm64}/bin/darnix-vm-arm64"
-        else "${run-vm}/bin/darnix-vm";
-    };
-    x86 = {
-      type = "app";
-      program = "${run-vm}/bin/darnix-vm";
+        then "${targets.arm64.run}/bin/darnix-run"
+        else "${targets.x86_64.run}/bin/darnix-run";
     };
     arm64 = {
       type = "app";
-      program = "${run-vm-arm64}/bin/darnix-vm-arm64";
+      program = "${targets.arm64.run}/bin/darnix-run";
+    };
+    x86_64 = {
+      type = "app";
+      program = "${targets.x86_64.run}/bin/darnix-run";
     };
   };
 }

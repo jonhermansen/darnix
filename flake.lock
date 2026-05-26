@@ -34,6 +34,40 @@
         "type": "github"
       }
     },
+    "berkeley-softfloat-3": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1532638343,
+        "narHash": "sha256-Yflpx+mjU8mD5biClNpdmon24EHg4aWBZszbOur5VEA=",
+        "owner": "qemu-project",
+        "repo": "berkeley-softfloat-3",
+        "rev": "b64af41c3276f97f0e181920400ee056b9c88037",
+        "type": "gitlab"
+      },
+      "original": {
+        "owner": "qemu-project",
+        "repo": "berkeley-softfloat-3",
+        "rev": "b64af41c3276f97f0e181920400ee056b9c88037",
+        "type": "gitlab"
+      }
+    },
+    "berkeley-testfloat-3": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1689946593,
+        "narHash": "sha256-inQAeYlmuiRtZm37xK9ypBltCJ+ycyvIeIYZK8a+RYU=",
+        "owner": "qemu-project",
+        "repo": "berkeley-testfloat-3",
+        "rev": "e7af9751d9f9fd3b47911f51a5cfd08af256a9ab",
+        "type": "gitlab"
+      },
+      "original": {
+        "owner": "qemu-project",
+        "repo": "berkeley-testfloat-3",
+        "rev": "e7af9751d9f9fd3b47911f51a5cfd08af256a9ab",
+        "type": "gitlab"
+      }
+    },
     "bootstrap_cmds-src": {
       "flake": false,
       "locked": {
@@ -88,7 +122,9 @@
     },
     "grub-src": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": [
+          "nixpkgs"
+        ]
       },
       "locked": {
         "lastModified": 1778647252,
@@ -120,6 +156,23 @@
         "ref": "nix",
         "repo": "hfs",
         "type": "github"
+      }
+    },
+    "keycodemapdb": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1677604609,
+        "narHash": "sha256-GbZ5mrUYLXMi0IX4IZzles0Oyc095ij2xAsiLNJwfKQ=",
+        "owner": "qemu-project",
+        "repo": "keycodemapdb",
+        "rev": "f5772a62ec52591ff6870b7e8ef32482371f22c6",
+        "type": "gitlab"
+      },
+      "original": {
+        "owner": "qemu-project",
+        "repo": "keycodemapdb",
+        "rev": "f5772a62ec52591ff6870b7e8ef32482371f22c6",
+        "type": "gitlab"
       }
     },
     "libdispatch-src": {
@@ -158,11 +211,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1778643071,
-        "narHash": "sha256-0nxOs3C7pUKYmiNB7iCRFe/6LLSur2FyQOx4iatyUYc=",
+        "lastModified": 1779722488,
+        "narHash": "sha256-8vcdXLEc1IT99yHxBqpYhZB5gjMmUauf4jEmG1/8WNU=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "b69be83792d7b769a768378cf12b282480607737",
+        "rev": "380d9786fd02c0bc64acf48f9583f6c6e070e45a",
         "type": "github"
       },
       "original": {
@@ -172,19 +225,27 @@
         "type": "github"
       }
     },
-    "nixpkgs_2": {
+    "qemu-src": {
+      "inputs": {
+        "berkeley-softfloat-3": "berkeley-softfloat-3",
+        "berkeley-testfloat-3": "berkeley-testfloat-3",
+        "keycodemapdb": "keycodemapdb",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
       "locked": {
-        "lastModified": 1779142970,
-        "narHash": "sha256-gz6GXsiQApVvmHjCX2XQdtxp2gedZWLosNlDTR5b7dM=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "e4256fff830a2cab907de86c1bf4b38d8f0732f4",
+        "lastModified": 1779737304,
+        "narHash": "sha256-W9JbMORW05yY6PFgeEMpEPS7bCWzN3HM7q/T6X0Z78U=",
+        "owner": "jonhermansen",
+        "repo": "qemu",
+        "rev": "7cbc621c2ac62f309f699c7bcf3b80b475067ead",
         "type": "github"
       },
       "original": {
-        "owner": "NixOS",
-        "ref": "master",
-        "repo": "nixpkgs",
+        "owner": "jonhermansen",
+        "ref": "nix",
+        "repo": "qemu",
         "type": "github"
       }
     },
@@ -199,7 +260,8 @@
         "hfs-src": "hfs-src",
         "libdispatch-src": "libdispatch-src",
         "libplatform-src": "libplatform-src",
-        "nixpkgs": "nixpkgs_2",
+        "nixpkgs": "nixpkgs",
+        "qemu-src": "qemu-src",
         "xnu-src": "xnu-src"
       }
     },
@@ -221,11 +283,11 @@
     "xnu-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1779415732,
-        "narHash": "sha256-0uPJ7wTvPs3Ha/mX775zpRT8vatv1Bes/GsbiPB5Lo8=",
+        "lastModified": 1779735004,
+        "narHash": "sha256-zVxQZ2nxwatYAD7hY4x4PWpS2AQeTPtV8tlwVry0mks=",
         "owner": "jonhermansen",
         "repo": "xnu",
-        "rev": "79c848b50fdc5bae2eaf5c4315e3419337fa3eff",
+        "rev": "a352ae22d0f46044e04a8e85ac06da01d31f88d2",
         "type": "github"
       },
       "original": {

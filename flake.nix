@@ -13,17 +13,25 @@
     Libsystem-src            = { url = "github:apple-oss-distributions/Libsystem/Libsystem-1356"; flake = false; };
     libplatform-src          = { url = "github:apple-oss-distributions/libplatform/libplatform-375.100.10"; flake = false; };
     libdispatch-src          = { url = "github:apple-oss-distributions/libdispatch/libdispatch-1542.100.32"; flake = false; };
-    grub-src                 = { url = "github:jonhermansen/grub/nix"; };
+    grub-src = {
+      url = "github:jonhermansen/grub/nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     hfs-src                  = { url = "github:jonhermansen/hfs/nix"; flake = false; };
-  };
+    qemu-src = {
+      url = "github:jonhermansen/qemu/nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+};
 
   outputs = inputs@{ self, nixpkgs, flake-utils, ... }:
     flake-utils.lib.eachSystem [ "aarch64-darwin" "x86_64-darwin" ] (system:
       let
         pkgs = import nixpkgs { inherit system; };
+        qemu = inputs.qemu-src.packages.${system}.qemu;
       in
         import ./nix {
-          inherit pkgs inputs system;
+          inherit pkgs inputs system qemu;
           buildScriptSrc = let
             root = toString ./.;
             allowed = [ "build.sh" "codeql.sh" "patches" "Makefile" "templates" ];
