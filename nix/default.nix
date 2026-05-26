@@ -26,8 +26,8 @@ let
   kdkName = "KDK_${kdkVersion}_${macosBuild}.kdk";
 
   # Shared kernel boot arguments — common across all architectures.
-  commonBootArgs = "-v debug=0x14e keepsyms=1 -enable_kprintf_spam";
-  x86BootArgs    = "${commonBootArgs} rd=md0 serial=1 -s io=0xff msgbuf=1048576 ignore_msrs=1 atm_diagnostic_config=0x100 amfi_get_out_of_my_way=1 cs_enforcement_disable=1";
+  commonBootArgs = "-v debug=0x14e keepsyms=1 -enable_kprintf_spam atm_diagnostic_config=0x100 -noprogress";
+  x86BootArgs    = "${commonBootArgs} rd=md0 serial=1 -s io=0xff msgbuf=1048576 ignore_msrs=1 amfi_get_out_of_my_way=1 cs_enforcement_disable=1";
   arm64BootArgs  = "${commonBootArgs} serial=3";
 
   xcodeXip = pkgs.requireFile {
