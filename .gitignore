@@ -73,3 +73,6 @@ xnu-codeql
 xnu-codeql.zip
 xnu-queries
 codeql_queries
+
+# Nix
+/result*

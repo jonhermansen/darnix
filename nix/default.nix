@@ -25,6 +25,11 @@ let
 
   kdkName = "KDK_${kdkVersion}_${macosBuild}.kdk";
 
+  # Shared kernel boot arguments — common across all architectures.
+  commonBootArgs = "-v debug=0x14e keepsyms=1 -enable_kprintf_spam";
+  x86BootArgs    = "${commonBootArgs} rd=md0 serial=1 -s io=0xff msgbuf=1048576 ignore_msrs=1 atm_diagnostic_config=0x100 amfi_get_out_of_my_way=1 cs_enforcement_disable=1";
+  arm64BootArgs  = "${commonBootArgs} serial=3";
+
   xcodeXip = pkgs.requireFile {
     name = "Xcode_${xcodeVersion}_Apple_silicon.xip";
     hash = xcodeHash;
@@ -353,20 +358,10 @@ VMPLAT_EOF
       cat > xnu/pexpert/arm/pe_bootargs.c << 'BOOTARGS_EOF'
 #include <pexpert/pexpert.h>
 #include <pexpert/boot.h>
-#include <string.h>
-#define FORCED_BOOT_ARGS " -v debug=0x14e serial=3 keepsyms=1"
-static int boot_args_patched = 0;
 char *
 PE_boot_args(void)
 {
-	char *cmdline = (char *)((boot_args *)PE_state.bootArgs)->CommandLine;
-	if (!boot_args_patched) {
-		if (strlen(cmdline) + strlen(FORCED_BOOT_ARGS) < BOOT_LINE_LENGTH) {
-			strlcat(cmdline, FORCED_BOOT_ARGS, BOOT_LINE_LENGTH);
-		}
-		boot_args_patched = 1;
-	}
-	return cmdline;
+	return (char *)((boot_args *)PE_state.bootArgs)->CommandLine;
 }
 BOOTARGS_EOF
 
@@ -471,7 +466,7 @@ BOOTARGS_EOF
     ];
   });
 
-  bootArgs = "-v debug=0x14e rd=md0 serial=1 -s io=0xff msgbuf=1048576 keepsyms=1 ignore_msrs=1 atm_diagnostic_config=0x100 amfi_get_out_of_my_way=1 cs_enforcement_disable=1";
+  bootArgs = x86BootArgs;
 
   initBin = pkgs.runCommand "darnix-init" {
     nativeBuildInputs = [ pkgs.stdenv.cc ];
@@ -534,6 +529,7 @@ BOOTARGS_EOF
       adt_phys    = "0x78010000";
       uart_base   = "0x20010000";
       mem_size    = "0x${pkgs.lib.toHexString ramBytes}";
+      bootArgs    = arm64BootArgs;
     in pkgs.runCommand "darnix-boot-${shortLabel}" {
       nativeBuildInputs = [ pkgs.python3 pkgs.darwin.cctools pkgs.stdenv.cc ];
     } ''
@@ -564,6 +560,7 @@ BOOTARGS_EOF
         -DMEM_SIZE=${mem_size} \
         -DTOP_OF_KERNEL_DATA=$TOP_OF_KERNEL_DATA \
         -DUART_BASE=${uart_base} \
+        '-DCMDLINE_STR="${bootArgs}"' \
         ${./stub.s} -o stub_pp.s
 
       as -arch arm64 -o stub.o stub_pp.s

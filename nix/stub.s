@@ -109,4 +109,4 @@ _start:
     .p2align 2
 banner:  .asciz "DARNIX STUB\r\n"
 jumpmsg: .asciz "JUMP\r\n"
-cmdline: .asciz "-v debug=0x14e serial=3 keepsyms=1"
+cmdline: .asciz CMDLINE_STR
