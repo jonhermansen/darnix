@@ -36,8 +36,12 @@ def node(properties, children=None):
 dram_base = int(sys.argv[1], 0) if len(sys.argv) > 1 else 0x70000000
 dram_size = int(sys.argv[2], 0) if len(sys.argv) > 2 else 0x40000000
 
+panic_log_size = 0x80000  # 512KB
+panic_log_base = dram_base + dram_size - panic_log_size
+
 cpu0 = node([
     prop('name', 'cpu0'),
+    prop('device_type', 'cpu'),
     prop('reg', struct.pack('<I', 0)),
     prop('state', 'running'),
     prop('die-id', struct.pack('<I', 0)),
@@ -59,7 +63,13 @@ chosen = node([
     prop('dram-base', struct.pack('<Q', dram_base)),
     prop('dram-size', struct.pack('<Q', dram_size)),
     prop('random-seed', bytes(range(1, 65))),
+    prop('embedded-panic-log-size', struct.pack('<I', panic_log_size)),
 ], [memory_map])
+
+pram = node([
+    prop('name', 'pram'),
+    prop('reg', struct.pack('<QQ', panic_log_base, panic_log_size)),
+])
 
 defaults = node([
     prop('name', 'defaults'),
@@ -107,6 +117,6 @@ root = node([
     prop('name', 'device-tree'),
     prop('target-type', 'vmapple'),
     prop('compatible', 'vmapple'),
-], [chosen, cpus, arm_io, defaults])
+], [chosen, cpus, arm_io, defaults, pram])
 
 sys.stdout.buffer.write(root)
