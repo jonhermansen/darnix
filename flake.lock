@@ -235,11 +235,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1779737304,
-        "narHash": "sha256-W9JbMORW05yY6PFgeEMpEPS7bCWzN3HM7q/T6X0Z78U=",
+        "lastModified": 1779768986,
+        "narHash": "sha256-2KTnyIp1FbQp/NHs7GWgPSp/33ltWAfcPCKADSS8naI=",
         "owner": "jonhermansen",
         "repo": "qemu",
-        "rev": "7cbc621c2ac62f309f699c7bcf3b80b475067ead",
+        "rev": "dad7b530f6d84dfc511faaeeba642d38582e4635",
         "type": "github"
       },
       "original": {
@@ -283,11 +283,11 @@
     "xnu-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1779735004,
-        "narHash": "sha256-zVxQZ2nxwatYAD7hY4x4PWpS2AQeTPtV8tlwVry0mks=",
+        "lastModified": 1779769654,
+        "narHash": "sha256-QzHy8Z89h7fn2ABUFwMHMQ1nTWI2BilynM8wGCKXYCM=",
         "owner": "jonhermansen",
         "repo": "xnu",
-        "rev": "a352ae22d0f46044e04a8e85ac06da01d31f88d2",
+        "rev": "0464a921f736bf933ee5cd0d49207989cf8cdefc",
         "type": "github"
       },
       "original": {
