@@ -3,9 +3,9 @@
 let
   # Xcode .xip — Apple's URL is gated by Developer auth.
   xcodeXip = pkgs.requireFile {
-    name = "Xcode_26.4.1_Apple_silicon.xip";
-    hash = "sha256-ydLjr+g/1V9TuzXvJZdBNR8zJ9HxGj9KX7kNXCONtKI=";
-    url = "https://download.developer.apple.com/Developer_Tools/Xcode_26.4.1/Xcode_26.4.1_Apple_silicon.xip";
+    name = "Xcode_26.4.1_Universal.xip";
+    hash = "sha256-4mmO81Dls4dAEysRENAr0iof65KMPgGcFo03POAOP/o="; # TODO: Replace with the actual hash from `nix hash file`
+    url = "https://download.developer.apple.com/Developer_Tools/Xcode_26.4.1/Xcode_26.4.1_Universal.xip";
   };
 
   kdkDmg = pkgs.requireFile {
@@ -328,7 +328,11 @@ BOOTARGS_EOF
   xnu-arm64  = mkXnu { arch = "ARM64";  machine = "VMAPPLE"; label = "arm64-vmapple"; };
   xnu-x86_64 = mkXnu { arch = "X86_64"; machine = "NONE";    label = "x86_64";        };
 
-  grubEfi = inputs.grub-src.packages.${system}.efi-x86_64;
+    grubEfi = (pkgs.callPackage "${inputs.grub-src}/nix/package.nix" {
+    localSrc = inputs.grub-src;
+    efiSupport = true;
+    efiArchOverride = "x86_64";
+  });
 
   newfs_hfs = pkgs.stdenv.mkDerivation {
     pname = "newfs_hfs";
