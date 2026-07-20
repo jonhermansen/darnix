@@ -209,6 +209,27 @@
         "type": "github"
       }
     },
+    "llvm-project": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1779767059,
+        "narHash": "sha256-7N6ldGMMWOEXx8VpYWeZfleyIGPKdpc8nB52nBqjZHE=",
+        "owner": "jonhermansen",
+        "repo": "llvm-project",
+        "rev": "aad8f199265f332498b608775578945e5d5df856",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jonhermansen",
+        "ref": "nix",
+        "repo": "llvm-project",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1779722488,
@@ -260,6 +281,7 @@
         "hfs-src": "hfs-src",
         "libdispatch-src": "libdispatch-src",
         "libplatform-src": "libplatform-src",
+        "llvm-project": "llvm-project",
         "nixpkgs": "nixpkgs",
         "qemu-src": "qemu-src",
         "xnu-src": "xnu-src"

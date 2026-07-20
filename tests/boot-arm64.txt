@@ -1,0 +1,277 @@
+warning: the daemon is missing the 'realisation-with-path-not-hash' protocol feature, needed to support content-addressing derivations
+warning: the daemon is missing the 'realisation-with-path-not-hash' protocol feature, needed to support content-addressing derivations
+warning: the daemon is missing the 'realisation-with-path-not-hash' protocol feature, needed to support content-addressing derivations
+warning: the daemon is missing the 'realisation-with-path-not-hash' protocol feature, needed to support content-addressing derivations
+warning: the daemon is missing the 'realisation-with-path-not-hash' protocol feature, needed to support content-addressing derivations
+WARNING: Image format was not specified for '/var/folders/2q/p5snq0f56wj06djnqrflxr6m0000gn/T/tmp.xKTgcLETC9/aux.img' and probing guessed raw.
+         Automatically detecting the format is dangerous for raw images, write operations on block 0 will be restricted.
+         Specify the 'raw' format explicitly to remove the restrictions.
+DARNIX STUB
+JUMP
+kprintf initialized
+Serial mode specified: 00000003
+initialize_screen: b=00000000, w=00000000, h=00000000, r=00000000, d=00000000
+initialize_screen: No video - forcing serial mode
+pe_arm_init_interrupts: args: 0xfffffe0007f53000
+pe_arm_map_interrupt_controller: soc_phys:  0x10000000
+pe_arm_map_interrupt_controller: found interrupt-controller
+pe_arm_map_interrupt_controller: gPicBase: 0xfffffe0010084000
+pe_arm_map_interrupt_controller: found timer
+pe_arm_map_interrupt_controller: gTimerBase: 0xfffffe0010094000
+pe_arm_init_debug: failed to find cpu-debug-interface
+Darwin Kernel Version 25.4.0: Mon Jul 20 06:43:50 UTC 2026; _nixbld1:xnu.obj/DEVELOPMENT_ARM64_VMAPPLE
+pmap_startup() init/release time: 4586 microsec
+vm_page_bootstrap: 253705 free pages, 8439 wired pages
+VM bootstrap: 73 maps, 256 entries and 64 nodes available
+Enable all vm_debug options with boot-arg vm_debug=1
+Maximum number of VM swap files: 100
+bsd_pageable            : 0xfffffe1000088000 - 0xfffffe1004390000 (67M)
+ipc_kernel_map          : 0xfffffe1004390000 - 0xfffffe1008390000 (64M)
+zones                   : 0xfffffe1008390000 - 0xfffffe3008390000 (128G)
+ipc_kernel_copy_map     : 0xfffffe3008390000 - 0xfffffe3008b90000 (8M)
+gIOKitPageableFixed     : 0xfffffe3008b90000 - 0xfffffe3068b90000 (1536M)
+kmem_io                 : 0xfffffe3068b90000 - 0xfffffe30a8b90000 (1024M)
+compressor              : 0xfffffe30a8b90000 - 0xfffffe40a91f8000 (64G)
+zone_meta               : 0xfffffe40a91f8000 - 0xfffffe40b1dc4000 (139M)
+kmem_data_private_range : 0xfffffe40b1dc4000 - 0xfffffe707473c000 (191G)
+kmem_data_shared_range  : 0xfffffe707473c000 - 0xfffffea0370b4000 (191G)
+mb                      : 0xfffffea0370b4000 - 0xfffffea03d0b4000 (96M)
+bufferhdr               : 0xfffffea03d0b4000 - 0xfffffea03d384000 (2880K)
+kmem_ptr_range_0        : 0xfffffea03d384000 - 0xfffffecfffcfc000 (191G)
+vm: "vm_compressor_mode" is 4
+zone_init: map VM    0xfffffe1008390000:0xfffffe14d505c000 (19G, 19G usable)
+zone_init: map RO    0xfffffe14d505c000:0xfffffe166ea00000 (6G, 6G usable)
+zone_init: map GEN0  0xfffffe166ea00000:0xfffffe1b3b6cc000 (19G, 19G usable)
+zone_init: map GEN1  0xfffffe1b3b6cc000:0xfffffe2008398000 (19G, 19G usable)
+zone_init: map GEN2  0xfffffe2008398000:0xfffffe24d5064000 (19G, 19G usable)
+zone_init: map GEN3  0xfffffe24d5064000:0xfffffe29a1d30000 (19G, 19G usable)
+zone_init: map DATA  0xfffffe29a1d30000:0xfffffe3008390000 (25G, 25G usable)
+zone_init: metadata  0xfffffe40a9208000:0xfffffe40b1208000 (128M)
+zone_init: metabits  0xfffffe40b1208000:0xfffffe40b1db4000 (11M)
+zone_init: extra     0:0 (0B)
+Unable to find vm tag  for btlog
+VM bootstrap done: 71 maps, 235 entries and 60 nodes left
+IOKit IOMD setownership ENABLED
+ATM subsystem is initialized
+standard timeslicing quantum is 10000 us
+standard background quantum is 2500 us
+Scheduler: Default of clutch
+Setting scheduler priority decay band limit 18
+cs_init: disable_cs_enforcement=1 PE_i_can_has_debugger=0
+Firehose disabled: Logging disabled by ATM
+System message buffer configured: 1048576 bytes
+OSLog stream disabled: Logging disabled by ATM
+Log queues disabled: Logging disabled by ATM
+Long logs support disabled: Logging disabled by ATM
+[trap_telemetry] trap_telemetry_init
+IPC_PTHREAD_PRIORITY subsystem is initialized
+mig_table_max_displ = 90 mach_kobj_count = 384
+BANK subsystem is initialized
+suspend_cluster_powerdown_locked>calling sched_update_powered_cores to suspend powerdown
+kdp_core zlib memory 0x8000
+Registered coredump handler for kernel
+Serial requested, consistent debug disabled or debug boot arg not present, configuring debugging over serial
+Initializing serial KDP
+iBoot version: 
+iBoot Stage 2 version: 
+"name" not a kext
+"RAMDisk" not a kext
+ulock_initialize>thread_max=10240, ull_hash_buckets=4096
+vm: creating swapout thread
+vm: creating swapfile creation thread
+vm: creating swapfile GC thread
+lockdown_mode: error getting state from nvram
+lockdown_mode: lockdown mode in nvram is off
+calling mpo_policy_init for vnguard
+Security policy loaded: Guarded vnode policy (vnguard)
+SDT: unable to find prelink info
+trust_cache_runtime_init: image4 interface not available, skipping
+no external trust caches found (segment length is zero)
+keepsyms boot arg specified; keeping linkedit segment for symbols.
+No POST boot-arg set.
+Registering: IOService:/
+config(0): creating
+config(0xb9d85ac12a9e372b): starting on vmapple, 10
+IOQEMUPlatform[0x0]::attach(vmapple[0x10000010c])
+IOQEMUPlatform[0x10000010d]::probe(vmapple)
+IOQEMUPlatform[0x10000010d]::detach(vmapple[0x10000010c])
+IOPanicPlatform[0x0]::attach(vmapple[0x10000010c])
+IOPanicPlatform[0x10000010e]::probe(vmapple)
+IOPanicPlatform[0x10000010e]::detach(vmapple[0x10000010c])
+IOQEMUPlatform[0x10000010d]::start(vmapple) <1>
+IOQEMUPlatform[0x10000010d]::attach(vmapple[0x10000010c])
+IOQEMUPlatform::start
+IOService[0x0]::attach(IOUserResources[0x100000110])
+Registering: IOService:/IOQEMUPlatform/IOSystemStateNotification
+config(1): creating
+IOPMrootDomain[0x0]::attach(IOQEMUPlatform[0x10000010d])
+config(0xb9d85ac12a9e4bc3): starting on IOSystemStateNotification, 10
+config(0xb9d85ac12a9e4bc3): terminating
+config(1): creating
+pm31034 0xb9d85ac12a9e372b IOPMrootDomain 9 8000 2
+config(0xb9d85ac12a9ecbc3): starting on IOResources, 10
+pm31373 0xb9d85ac12a9ee05b IOPMrootDomain 28 200 0
+IORootParent[0x0]::attach(IOPMrootDomain[0x100000113])
+pm31691 0xb9d85ac12a9e372b IORootParent 20 0 0
+pm31845 0xb9d85ac12a9ee05b IORootParent 4 2 1
+pm32019 0xb9d85ac12a9ee05b IORootParent 35 1 0
+pm32181 0xb9d85ac12a9eb72b IORootParent 38 b9d85acac41ef1d3 1
+pm32355 0xb9d85ac12a9eb72b IORootParent -38 b9d85acac41ef1d3 0
+pm32555 0xb9d85ac12a9ee05b IORootParent 29 1 0
+pm32713 0xb9d85ac12a9e372b IORootParent 2 b9d85abc5dc548f3 0
+pm32907 0xb9d85ac12a9ee05b IORootParent 35 1 1
+pm33040 0xb9d85ac12a9ee05b IORootParent 29 1 1
+pm33179 0xb9d85ac12a9e372b IOPMrootDomain 22 4 10001
+pm33349 0xb9d85ac12a9ee05b IORootParent 20 14 0
+pm33485 0xb9d85ac12a9ee05b IORootParent 35 1 1
+pm33633 0xb9d85ac12a9ee05b IORootParent 29 1 1
+pm33780 0xb9d85ac12a9ee05b IOPMrootDomain 1 1 2
+pm33938 0xb9d85ac12a9ee05b IOPMrootDomain 4 5 1
+pm34089 0xb9d85ac12a9ee05b IOPMrootDomain 35 4 0
+pm34236 0xb9d85ac12a9ee05b IORootParent 19 2 4
+pm34379 0xb9d85ac12a9ee05b IOPMrootDomain 48 20000 e0000340
+pm34562 0xb9d85ac12a9ee05b IOPMrootDomain 48 fffffe0007d67158 0
+IOServicePH::kIOMessageSystemCapabilityChange: will 0xf->0xf
+pm34927 0xb9d85ac12a9ee05b IOPMrootDomain 45 20000 b9d85acac41eda13
+pm35119 0xb9d85ac12a9eb72b IOPMrootDomain 39 b9d85abc5dc548f3 4
+IOServicePH::systemPowerChange to 0x30
+pm35411 0xb9d85ac12a9eb72b IOPMrootDomain -39 b9d85abc5dc548f3 0
+pm35596 0xb9d85ac12a9ee05b IORootParent 35 1 1
+pm35735 0xb9d85ac12a9ee05b IORootParent 29 1 1
+pm35900 0xb9d85ac12a9eb72b IOPMrootDomain 38 b9d85abc5dc548f3 4
+pm36098 0xb9d85ac12a9eb72b IOPMrootDomain -38 b9d85abc5dc548f3 0
+pm36305 0xb9d85ac12a9eb72b IOPMrootDomain 40 b9d85abc5dc548f3 4
+pm36500 0xb9d85ac12a9eb72b IOPMrootDomain -40 b9d85abc5dc548f3 0
+pm36695 0xb9d85ac12a9ee05b IOPMrootDomain 48 30000 e0000340
+pm36879 0xb9d85ac12a9ee05b IOPMrootDomain 48 fffffe0007d67158 0
+IOServicePH::kIOMessageSystemCapabilityChange: did 0xf->0xf
+pm37230 0xb9d85ac12a9ee05b IOPMrootDomain 45 30000 b9d85acac41eda13
+pm37419 0xb9d85ac12a9ee05b IOPMrootDomain 29 4 0
+pm37556 0xb9d85ac12a9ee05b IOPMrootDomain 22 4 30002
+pm37706 0xb9d85ac12a9ee05b IOPMrootDomain 22 4 40008
+pm37865 0xb9d85ac12a9ee05b IOPMrootDomain 35 4 4
+pm38002 0xb9d85ac12a9ee05b IOPMrootDomain 29 4 4
+pm38147 0xb9d85ac12a9ee05b IOPMrootDomain 35 4 4
+pm38289 0xb9d85ac12a9ee05b IOPMrootDomain 29 4 4
+Rpm38500 0xb9d85ac12a9ee05b IOPMrootDomain 35 4 4
+pm38645 0xb9d85ac12a9ee05b IOPMrootDomain 29 4 4
+pm38791 0xb9d85ac12a9ee05b IOPMrootDomain 28 200 0
+pm38944 0xb9d85ac12a9ee05b IOPMrootDomain 48 60000 e0000340
+pm39122 0xb9d85ac12a9ee05b IOPMrootDomain 48 fffffe0007e75020 0
+pm39313 0xb9d85ac12a9ee05b IOPMrootDomain 45 60000 b9d85acac41ee2d3
+egistering: IOService:/IOQEMUPlatform/IOPMrootDomain
+config(2): creating
+Copyright (c) 1982, 1986, 1989, 1991, 1993
+	The Regents of the University of California. All rights reserved.
+
+bsd_init: calling kauth_init
+bsd_init: calling process_name
+bsd_init: calling get_bsdthread_info
+MAC Framework successfully initialized
+bsd_init: calling chgproccnt
+bsd_init: calling kmem_suballoc
+bsd_init: calling bsd_bufferinit
+using 5094 buffer headers and 4595 cluster IO buffer headers
+bsd_init: calling IOKitInitializeTime
+config(0xb9d85ac12aa0772b): starting on IOPMrootDomain, 10
+IOResources: family specific matching fails
+config(0xb9d85ac12a9ecbc3): terminating
+IOQEMUPlatform: ml_set_max_cpus(1) done
+Registering: IOService:/IOQEMUPlatform
+config(2): creating
+IOQEMUPlatform:config(0xb9d85ac12a9e4bc3): starting on IOQEMUPlatform, 10
+config(0xb9d85ac12a9e4bc3): terminating
+PassthruInterruptController[0x0]::attach(IOQEMUPlatform[0x10000010d])
+config(2): creating
+config(0xb9d85ac12aa9605b): starting on PassthruInterruptController, 10
+config(0xb9d85ac12aa9605b): terminating
+:start - platform registered
+Registering: IOService:/IOQEMUPlatform/PassthruInterruptController
+match category exists, skipping IOPanicPlatform[0x10000010e]::start(vmapple) <1>
+config(0xb9d85ac12a9e372b): terminating
+config(0xb9d85ac12aa0772b): terminating
+bsd_init: calling vfsinit
+config(0): creating
+ktriage_register_subsystem_strings: set subsystem 8 strings
+bsd_init: calling proc_uuid_policy_init()
+bsd_init: calling mbinit
+mbinit: done [96 MB total pool size, (64/32) split]
+bsd_init: calling audit_init
+bsd_init: calling knote_init
+bsd_init: calling eventhandler_init
+bsd_init: calling aio_init
+New aio workqueue implementation selected
+pthread_init: pthread kext not loaded, skipping
+bsd_init: calling pshm_cache_init
+bsd_init: calling psem_cache_init
+bsd_init: calling nwk_wq_init
+bsd_init: calling dlil_init
+SK: netagent is enabled by default for this platform
+DLIL: running SUM16 self-tests ... PASSED
+dlil_init: Waiting for all the create dlil kernel threads to get scheduled at least once.
+config(0xb9d85ac12a9e372b): starting on IOResources, 10
+dlil_init: All the created dlil kernel threads have been scheduled at least once. Proceeding.
+bsd_init: calling socketinit
+bsd_init: skipping domaininit (no network kexts)
+bsd_init: skipping skywalk_init (no IOMapper in QEMU)
+bsd_init: skipping necp/netagent/net_aop init (no network kexts)
+bsd_init: calling memorystatus_init
+bsd_init: calling sysctl_mib_init
+bsd_init: calling bsd_autoconf
+bsd_autoconf: calling kminit
+bsd_init: calling loopattach
+ifnet_attach: All kernel threads created for interface lo0 have been scheduled at least once. Proceeding.
+ifnet_attach: Waiting for all kernel threads created for interface gif0 to get scheduled at least once.
+ifnet_attach: All kernel threads created for interface gif0 have been scheduled at least once. Proceeding.
+bsd_init: calling ether_family_init
+headless_register_nexus_domain_provider: failed to register domain provider
+bsd_init: calling net_init_run
+bsd_init: calling inittodr
+bsd_init: calling setconf
+IOFindBSDRoot: entered
+IOFindBSDRoot: waiting for IOBSD resource...
+IOResources: family specific matching fails
+IOFindBSDRoot: IOBSD resource found
+IOFindBSDRoot: rd='md0'
+IOFindBSDRoot: /chosen/memory-map found, RAMDisk property present
+IOFindBSDRoot: RAMDisk propLen=16 base=0x16f780000 size=0x800000
+Added memory device md0/rmd0 (01000000/12000000) at FFFFFDF123780000 for 0000000000800000
+IOFindBSDRoot: rd=md0, mdevlookup(0) returned 0x1000000
+BSD root: md0, major 1, minor 0
+setRootMedia: IOBlockStorageDriver class not found, skipping media walk
+publishHiddenMedia: IOMedia class not found, skipping
+bsd_init: vfs_mountroot
+spec_open : si_devbsdunit initialized to (0), throttle_mask is (0x0), isssd is (0)
+hfs: mounted Darnix on device b(1, 0)
+bsd_init: calling VFS_ROOT
+bsd_init: calling devfs_kernel_mount
+bsd_init: calling siginit
+bsd_init: calling bsd_utaskbootstrap
+config(0xb9d85ac12a9e372b): terminating
+bsd_init: calling mountroot_post_hook
+bsd_init: done
+Serial keyboard started
+resume_cluster_powerdown_locked>calling sched_update_powered_cores to resume powerdown
+vm: initializing swap
+vm: starting swapout thread
+vm: starting swapfile creation thread
+vm: starting swapfile GC thread
+VM Swap Subsystem is ON
+No POST boot-arg set.
+bsd_init: bsd_do_post - donebsdinit_task: opened /dev/console as fd 0
+load_init_program: attempting to load /usr/appleinternal/sbin/launchd.development
+load_init_program: attempting to load /sbin/launchd
+
+
+[38;2;0;210;255m ____    _    ____  _   _ ___ __  __
+[38;2;0;185;230m|  _ \  / \  |  _ \| \ | |_ _\ \/ /
+[38;2;0;160;205m| | | |/ _ \ | |_) |  \| || | \  / 
+[38;2;0;135;180m| |_| / ___ \|  _ <| |\  || | /  \ 
+[38;2;0;110;155m|____/_/   \_\_| \_\_| \_|___/_/\_\
+[0m
+  arch: arm64
+[1;37m  Darwin Kernel Version 25.4.0: Mon Jul 20 06:43:50 UTC 2026; _nixbld1:xnu.obj/DEVELOPMENT_ARM64_VMAPPLE[0m
+
+[5;1;32m  Hello from Nix![0m
+
+qemu-system-aarch64: terminating on signal 15 from pid 38131 (<unknown process>)

@@ -22,6 +22,10 @@
       url = "github:jonhermansen/qemu/nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    llvm-project = {
+      url = "github:jonhermansen/llvm-project/nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 };
 
   outputs = inputs@{ self, nixpkgs, flake-utils, ... }:
@@ -32,6 +36,7 @@
       in
         import ./nix {
           inherit pkgs inputs system qemu;
+          llvmLibc = inputs.llvm-project.packages.${system};
           buildScriptSrc = let
             root = toString ./.;
             allowed = [ "build.sh" "codeql.sh" "patches" "Makefile" "templates" ];

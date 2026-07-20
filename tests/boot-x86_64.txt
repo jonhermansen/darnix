@@ -1,0 +1,385 @@
+warning: the daemon is missing the 'realisation-with-path-not-hash' protocol feature, needed to support content-addressing derivations
+warning: the daemon is missing the 'realisation-with-path-not-hash' protocol feature, needed to support content-addressing derivations
+warning: the daemon is missing the 'realisation-with-path-not-hash' protocol feature, needed to support content-addressing derivations
+warning: the daemon is missing the 'realisation-with-path-not-hash' protocol feature, needed to support content-addressing derivations
+warning: the daemon is missing the 'realisation-with-path-not-hash' protocol feature, needed to support content-addressing derivations
+qemu-system-x86_64: warning: TCG doesn't support requested feature: CPUID[eax=01h].ECX.pcid [bit 17]
+qemu-system-x86_64: warning: TCG doesn't support requested feature: CPUID[eax=01h].ECX.tsc-deadline [bit 24]
+qemu-system-x86_64: warning: TCG doesn't support requested feature: CPUID[eax=07h,ecx=00h].EBX.invpcid [bit 10]
+[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01H[2J[01;01H[=3h[2J[01;01HBdsDxe: loading Boot0001 "UEFI Non-Block Boot Device" from PciRoot(0x0)/Pci(0x3,0x0)
+BdsDxe: starting Boot0001 "UEFI Non-Block Boot Device" from PciRoot(0x0)/Pci(0x3,0x0)
+[0m[30m[40m[2J[01;01H[0m[37m[40m[02;40HGNU GRUB  version 2.12
+
+[04;02H┌────────────────────────────────────────────────────────────────────────────────────────────────┐[05;02H││[06;02H││[07;02H││[08;02H││[09;02H││[10;02H││[11;02H││[12;02H││[13;02H││[14;02H││[15;02H││[16;02H││[17;02H││[18;02H││[19;02H││[20;02H││[21;02H││[22;02H││[23;02H││[24;02H└────────────────────────────────────────────────────────────────────────────────────────────────┘[25;02H[26;02H     Use the ▲ and ▼ keys to select which entry is highlighted.                              
+      Press enter to boot the selected OS, `e' to edit the commands before booting or `c' for 
+      a command-line.                                                                          [0m[30m[47m[05;03H*Darnix (HFS+)                                                                                  [0m[37m[40m[06;03H Darnix (mockfs)                                                                                [07;03H                                                                                                [08;03H                                                                                                [09;03H                                                                                                [10;03H                                                                                                [11;03H                                                                                                [12;03H                                                                                                [13;03H                                                                                                [14;03H                                                                                                [15;03H                                                                                                [16;03H                                                                                                [17;03H                                                                                                [18;03H                                                                                                [19;03H                                                                                                [20;03H                                                                                                [21;03H                                                                                                [22;03H                                                                                                [23;03H                                                                                                 [29;01H   The highlighted entry will be executed automatically in 5s.                                     [29;01H   The highlighted entry will be executed automatically in 4s.                                     [29;01H   The highlighted entry will be executed automatically in 3s.                                     [29;01H   The highlighted entry will be executed automatically in 2s.                                     [29;01H   The highlighted entry will be executed automatically in 1s.                                     [29;01H   The highlighted entry will be executed automatically in 0s.                                     [0m[30m[40m[2J[01;01H[0m[37m[40m[0m[30m[40m[2J[01;01H[0m[37m[40m  Booting `Darnix (HFS+)'
+
+error: no suitable video mode found.
+Booting in blind mode
+revision      0x0
+version       0x2
+command line  boot-args=-v debug=0x14f keepsyms=1 -s -enable_kprintf_spam atm_diagnostic_config=0x100 -noprogress io=0xff msgbuf=1048576 amfi_get_out_of_my_way=1 cs_enforcement_disable=1 serial=1 rd=md0 ignore_msrs=1 --no-devices
+memory map    0x2344000
+memory map sz 0x1620
+kaddr         0x100000
+ksize         0x25a0000
+physfree      0x26a0000
+bootargs: 0x2343000, &ksize: 0x234343c &kaddr: 0x2343438
+SMBIOS mem sz 0xff9c3000
+KC_hdrs_vaddr 0
+i386_init(0x2343000) kernelBootArgs=0xffffff8002343000
+vstart: calling PE_init_platform
+vstart: PE_init_platform done
+vstart: calling Idle_PTs_init
+Idle_PTs_init: NKPT=500 NPGPTD=4 physfree=0x26a0000
+Idle_PTs_init: KPTphys=0xffffff80026a0000 IdlePTD=0xffffff8002894000 IdlePDPT=0xffffff8002898000 IdlePML4=0xffffff8002899000
+Idle_PTs_init: fillkpt L1 done (pages=10394)
+Idle_PTs_init: page tables filled
+Idle_PTs_init: calling early_random
+early_random_init: calling bootseed_init
+bootseed_init_bootloader: requesting 64 bytes
+bootseed_init_bootloader: got 0 bytes
+bootseed_init_bootloader: insufficient entropy (0 < 64), filling with fallback
+bootseed_init_native: request_size=192 (skipping HW entropy for QEMU)
+bootseed_init_native: done (zeroed)
+early_random_init: bootseed_init done
+early_random_init: calling ccdrbg_factory_nisthmac
+early_random_init: ccdrbg_factory done, size=160
+early_random_init: calling ccdrbg_init, nonce=0x1fd276a10
+early_random_init: ccdrbg_init returned 0
+Idle_PTs_init: early_random=0x2d16c5a44a531136
+Physical address map base: 0xfffffe8d80000000
+Physical map idlepml4[509]: 0x800000000289a003
+Idle_PTs_init: physmap_init done, base=0xfffffe8d80000000 max=0xfffffe8f80000000
+Double map base: 0xfffff68440000000
+double map idlepml4[493]: 0x28a3023
+Idle_PTs_init: doublemap_init done
+Idle_PTs_init: idt64_remap done
+Idle_PTs_init: switching CR3 to 0x2899000
+Idle_PTs_init: CR3 switch done
+vstart: Idle_PTs_init done
+vstart: first_avail=0x28a6000, calling cpu_data_alloc
+vstart: cpu_data_alloc done
+vstart: cpu_desc_init done
+vstart: cpu_desc_load done
+vstart: cpu_syscall_init done
+VMM vendor Unknown VMM TSC frequency 0 KHz bus frequency 0 KHz
+EFI_get_frequency: read FSBFrequency value: 100000000
+tsc_init: MSR_PLATFORM_INFO ratio is 0, assuming TSC == bus
+ BUS: Frequency =    100.000000MHz, cvtt2n = 0000000A.00000000, cvtn2t = 00000000.19999999
+ TSC: Frequency =    100.000000MHz, cvtt2n = 0000000A.00000000, cvtn2t = 00000000.19999999, gran = 1
+Longterm timer threshold: 1000 ms
+kprintf initialized
+Serial mode specified: 00000001
+version_variant = 0
+version         = Darwin Kernel Version 25.4.0: Wed Jul  1 16:38:17 UTC 2026; _nixbld11:xnu.obj/DEVELOPMENT_X86_64
+RSDP ACPI 2.0 lookup failed.  Trying RSDP ACPI 1.0...
+RSDP ACPI 1.0 lookup failed also.
+acpi_count_enabled_logical_processors: Could not get RSDP physaddr from EFI.
+acpi_count_enabled_logical_processors returned 0, defaulting to 1
+KASLR slide: 0x0000000000000000 static and ignored
+Hiding local relocations
+WARNING: ignoring first page in [0x0:0x9f]
+mem_actual: 0xff9c3000
+ legacy sane_size: 0x100000000
+Physical memory 4089 MB
+avail_remaining = 0xfe833
+PMAP: Supervisor Mode Execute Protection enabled
+Kernel virtual space from 0xffffff8000000000 to 0xffffffffffffefff.
+Available physical space from 0x28a6000 to 0x17ffff000
+initialize_screen: b=00000000, w=00000000, h=00000000, r=00000000, d=00000001
+initialize_screen: No video - forcing serial mode
+[processor_init] processor 0 belongs to processor set 0 of type 0
+Darwin Kernel Version 25.4.0: Wed Jul  1 16:38:17 UTC 2026; _nixbld11:xnu.obj/DEVELOPMENT_X86_64
+Idle_PTs_release 479 pages from PFN 0x26b5
+pmap_high_used_top      0x17ffff
+pmap_high_used_bottom   0x17fa22
+pmap_middle_used_top    0x17f9ff
+pmap_middle_used_bottom 0x17c400
+pmap_startup() delaying init/free of page nums > 0x200000
+pmap_startup() init/release time: 3487890 microsec
+pmap_startup() delayed init/release of 0 pages
+vm_page_bootstrap: 1013399 free pages, 25388 wired pages, (up to 0 of which are delayed free)
+VM bootstrap: 73 maps, 128 entries and 16 nodes available
+Enable all vm_debug options with boot-arg vm_debug=1
+Maximum number of VM swap files: 100
+kext submap [0xffffff7f80e61000 - 0xffffff8000000000], kernel text [0xffffff8000200000 - 0xffffff8000e61000]
+zones                   : 0xffffff80067ed000 - 0xffffffa0067ed000 (128G)
+pmap_struct             : 0xffffffa0067ed000 - 0xffffffa0099ae000 (49M)
+bsd_pageable            : 0xffffffa0099ae000 - 0xffffffa00db30000 (65M)
+kmem_data_private_range : 0xffffffa00db30000 - 0xffffffb67f9ad000 (89G)
+compressor              : 0xffffffb67f9ad000 - 0xffffffc6797ed000 (63G)
+gIOKitPageableFixed     : 0xffffffc6797ed000 - 0xffffffc7797ed000 (4096M)
+mb                      : 0xffffffc7797ed000 - 0xffffffc77d7ed000 (64M)
+ipc_kernel_map          : 0xffffffc77d7ed000 - 0xffffffc7817ed000 (64M)
+bufferhdr               : 0xffffffc7817ed000 - 0xffffffc781fa5000 (7M)
+zone_meta               : 0xffffffc781fa5000 - 0xffffffc7a2bc1000 (524M)
+ipc_kernel_copy_map     : 0xffffffc7a2bc1000 - 0xffffffc7a33c1000 (8M)
+kmem_ptr_range_1        : 0xffffffc7a33c1000 - 0xffffffd2dc301000 (44G)
+kmem_data_shared_range  : 0xffffffd2dc301000 - 0xffffffe94e17e000 (89G)
+kmem_ptr_range_0        : 0xffffffe94e17e000 - 0xfffffff4870be000 (44G)
+kmem_ptr_range_2        : 0xfffffff4870be000 - 0xffffffffbfffe000 (44G)
+kmem_io                 : 0xffffffffbfffe000 - 0xffffffffffffe000 (1024M)
+vm: "vm_compressor_mode" is 4
+Unable to find vm tag  for btlog
+zone_init: map VM    0xffffff80067ed000:0xffffff84d34b9000 (19G, 19G usable)
+zone_init: map RO    0xffffff84d34b9000:0xffffff866ce5d000 (6G, 6G usable)
+zone_init: map GEN0  0xffffff866ce5d000:0xffffff8b39b29000 (19G, 19G usable)
+zone_init: map GEN1  0xffffff8b39b29000:0xffffff90067f5000 (19G, 19G usable)
+zone_init: map GEN2  0xffffff90067f5000:0xffffff94d34c1000 (19G, 19G usable)
+zone_init: map GEN3  0xffffff94d34c1000:0xffffff99a018d000 (19G, 19G usable)
+zone_init: map DATA  0xffffff99a018d000:0xffffffa0067ed000 (25G, 25G usable)
+zone_init: metadata  0xffffffc781fb5000:0xffffffc7a1fb5000 (512M)
+zone_init: metabits  0xffffffc7a1fb5000:0xffffffc7a2bb1000 (11M)
+zone_init: extra     0:0 (0B)
+VM bootstrap done: 69 maps, 105 entries and 10 nodes left
+IOKit IOMD setownership ENABLED
+ATM subsystem is initialized
+standard timeslicing quantum is 10000 us
+standard background quantum is 2500 us
+Scheduler: Default of dualq
+Setting scheduler priority decay band limit 18
+cs_init: disable_cs_enforcement=1 PE_i_can_has_debugger=1
+cs_init: code signing enforcement DISABLED
+Log queues disabled: Logging disabled by ATM
+System message buffer configured: 1048576 bytes
+Long logs support disabled: Logging disabled by ATM
+Firehose disabled: Logging disabled by ATM
+OSLog stream disabled: Logging disabled by ATM
+[trap_telemetry] trap_telemetry_init
+mig_table_max_displ = 90 mach_kobj_count = 384
+BANK subsystem is initialized
+IPC_PTHREAD_PRIORITY subsystem is initialized
+Reallocated master cpu data: 0xffffff8001022180, interrupt stack: 0xffffffe94e193000, fault stack: 0xffffff800010c800
+CPU identification: Intel Core Processor (Haswell, no TSX)
+CPU features: FPU DE PSE TSC MSR PAE MCE CX8 APIC SEP MTRR PGE MCA CMOV PAT PSE36 CLFSH MMX FXSR SSE SSE2 SSE3 PCLMULQDQ SSSE3 FMA CX16 SSE4.1 SSE4.2 x2APIC MOVBE POPCNT AES VMM XSAVE AVX1.0 RDRAND F16C RDWRFSGS BMI1 AVX2 SMEP BMI2 ERMS
+CPU extended features: SYSCALL XD EM64T LAHF LZCNT RDTSCP
+Initializing EFI runtime services
+efi_init() kernel base: 0x100000 size: 0x25a0000
+           efiSystemTable physical: 0x251b018 virtual: 0xffffff800251b018
+           efiRuntimeServicesPageStart: 0x235b
+           efiRuntimeServicesPageCount: 0x345
+           efiRuntimeServicesVirtualPageStart: 0x0000000000000000
+ Type: 6 phys: 0x7ee41000 EFIv: 0xffffff800235b000 kv: 0xffffff800235b000 size: 0xc1000
+ Type: 6 phys: 0x7f8ed000 EFIv: 0xffffff800241c000 kv: 0xffffff800241c000 size: 0x100000
+ Type: 5 phys: 0x7f9ed000 EFIv: 0xffffff800251c000 kv: 0xffffff800251c000 size: 0x100000
+ Type: 6 phys: 0x7fef4000 EFIv: 0xffffff800261c000 kv: 0xffffff800261c000 size: 0x84000
+ Type: b phys: 0xffc00000 EFIv: 0xffc00000 kv: 0xffffff80ffc00000 size: 0x400000
+ Skipping MMIO region (GRUB does not remap these)
+Boot args version 2 revision 0 mode 64
+Processing 64-bit EFI tables at 0xffffff800251b018
+Header:
+  Signature:   0x5453595320494249
+  Revision:    0x00020046
+  HeaderSize:  0x00000078
+  CRC32:       0x2deb38e9
+RuntimeServices: 0xffffff800251bb98
+System table calculated CRC32 = 0x2deb38e9, header = 0x2deb38e9
+RuntimeServices table at 0xffffff800251bb98
+Checking runtime services table 0xffffff800251bb98
+Runtime table calculated CRC32 = 0x3781eb42, header = 0x3781eb42
+MSR_IA32_APIC_BASE 0xfee00000 enabled legacy mode BSP
+x2APIC supported and will be enabled
+x2APIC mode enabled
+ID: 0x0 LDR: 0x1
+Boot cpu local APIC id 0x0
+TSC sync margin disabled
+fpu_state: AVX, state_size: 832
+Kernel text is 2MB aligned and will be mapped with 2M pages
+Kernel text 0xffffff8000200000-0xffffff8000e61000 to be write-protected
+Slow TSC, rtc_nanotime.shift == 4
+[RTCLOCK] frequency 100000000 (100000000)
+maxDec: 21474836470
+suspend_cluster_powerdown_locked>calling sched_update_powered_cores to suspend powerdown
+kdp_core zlib memory 0x7000
+Registered coredump handler for kernel
+Kernel boot args: 'boot-args=-v debug=0x14f keepsyms=1 -s -enable_kprintf_spam atm_diagnostic_config=0x100 -noprogress io=0xff msgbuf=1048576 amfi_get_out_of_my_way=1 cs_enforcement_disable=1 serial=1 rd=md0 ignore_msrs=1 --no-devices'
+"name" not a kext
+"RAMDisk" not a kext
+Registering: IOService:/
+config(0): creating
+ulock_initialize>thread_max=10240, ull_hash_buckets=4096
+vm: creating swapout thread
+vm: creating swapfile creation thread
+vm: creating swapfile GC thread
+config(0x2a78bde4a57a45e3): starting on ACPI, 10
+IOQEMUPlatform[0x0]::attach(ACPI[0x100000112])
+IOQEMUPlatform[0x100000113]::probe(ACPI)
+IOQEMUPlatform[0x100000113]::detach(ACPI[0x100000112])
+IOPanicPlatform[0x0]::attach(ACPI[0x100000112])
+IOPanicPlatform[0x100000114]::probe(ACPI)
+IOPanicPlatform[0x100000114]::detach(ACPI[0x100000112])
+IOQEMUPlatform[0x100000113]::start(ACPI) <1>
+IOQEMUPlatform[0x100000113]::attach(ACPI[0x100000112])
+IOQEMUPlatform::start
+IOService[0x0]::attach(IOUserResources[0x100000116])
+Registering: IOService:/IOQEMUPlatform/IOSystemStateNotification
+config(1): creating
+IOPMrootDomain[0x0]::attach(IOQEMUPlatform[0x100000113])
+config(0x2a78bde4a57f4c5b): starting on IOSystemStateNotification, 10
+config(0x2a78bde4a57f4c5b): terminating
+config(1): creating
+config(0x2a78bde4a57fdc5b): starting on IOResources, 10
+IOResources: family specific matching fails
+config(0x2a78bde4a57fdc5b): terminating
+pm8064430 0x2a78bde4a57f4c5b IOPMrootDomain 28 200 0
+pm8087970 0x2a78bde4a57a45e3 IOPMrootDomain 9 8000 2
+IORootParent[0x0]::attach(IOPMrootDomain[0x100000119])
+pm8092870 0x2a78bde4a57f4c5b IORootParent 4 2 1
+pm8107080 0x2a78bde4a57f4c5b IORootParent 35 1 0
+pm8113590 0x2a78bde4a57f35e3 IORootParent 38 2a78bddfd8b285b3 1
+pm8114840 0x2a78bde4a57f35e3 IORootParent -38 2a78bddfd8b285b3 0
+pm8132590 0x2a78bde4a57f4c5b IORootParent 29 1 0
+pm8136530 0x2a78bde4a57a45e3 IORootParent 20 0 0
+pm8139670 0x2a78bde4a57f4c5b IORootParent 35 1 1
+pm8140490 0x2a78bde4a57f4c5b IORootParent 29 1 1
+pm8141730 0x2a78bde4a57a45e3 IORootParent 2 2a78bde4a56c42d3 0
+pm8145990 0x2a78bde4a57f4c5b IORootParent 20 14 0
+pm8147380 0x2a78bde4a57f4c5b IORootParent 35 1 1
+pm8148070 0x2a78bde4a57f4c5b IORootParent 29 1 1
+pm8149560 0x2a78bde4a57f4c5b IOPMrootDomain 1 1 2
+pm8153130 0x2a78bde4a57f4c5b IOPMrootDomain 4 5 1
+pm8156330 0x2a78bde4a57f4c5b IOPMrootDomain 35 4 0
+pm8158960 0x2a78bde4a57f4c5b IORootParent 19 2 4
+pm8164780 0x2a78bde4a57f4c5b IOPMrootDomain 48 20000 e0000340
+pm8166460 0x2a78bde4a57f4c5b IOPMrootDomain 48 ffffff8000b88ae0 0
+IOServicePH::kIOMessageSystemCapabilityChange: will 0xf->0xf
+pm8170380 0x2a78bde4a57f4c5b IOPMrootDomain 45 20000 2a78bddfd8b28c93
+pm8174270 0x2a78bde4a57f35e3 IOPMrootDomain 39 2a78bde4a56c42d3 4
+IOServicePH::systemPowerChange to 0x30
+pm8177000 0x2a78bde4a57f35e3 IOPMrootDomain -39 2a78bde4a56c42d3 0
+pm8180070 0x2a78bde4a57f4c5b IORootParent 35 1 1
+pm8180790 0x2a78bde4a57f4c5b IORootParent 29 1 1
+pm8184190 0x2a78bde4a57f35e3 IOPMrootDomain 38 2a78bde4a56c42d3 4
+pm8185110 0x2a78bde4a57f35e3 IOPMrootDomain -38 2a78bde4a56c42d3 0
+pm8186880 0x2a78bde4a57f35e3 IOPMrootDomain 40 2a78bde4a56c42d3 4
+pm8187980 0x2a78bde4a57f35e3 IOPMrootDomain -40 2a78bde4a56c42d3 0
+pm8190390 0x2a78bde4a57f4c5b IOPMrootDomain 48 30000 e0000340
+pm8191240 0x2a78bde4a57f4c5b IOPMrootDomain 48 ffffff8000b88ae0 0
+IOServicePH::kIOMessageSystemCapabilityChange: did 0xf->0xf
+pm8193240 0x2a78bde4a57f4c5b IOPMrootDomain 45 30000 2a78bddfd8b28c93
+pm8196700 0x2a78bde4a57f4c5b IOPMrootDomain 29 4 0
+pm8199340 0x2a78bde4a57a45e3 IOPMrootDomain 22 4 20001
+pm8201260 0x2a78bde4a57f4c5b IOPMrootDomain 35 4 4
+pm8201960 0x2a78bde4a57f4c5b IOPMrootDomain 29 4 4
+pm8203920 0x2a78bde4a57f4c5b IOPMrootDomain 28 200 0
+pm8206330 0x2a78bde4a57f4c5b IOPMrootDomain 48 60000 e0000340
+pm8207170 0x2a78bde4a57f4c5b IOPMrootDomain 48 ffffff8000c542c0 0
+pm8208600 0x2a78bde4a57f4c5b IOPMrootDomain 45 60000 2a78bddfd8b27433
+Registering: IOService:/IOQEMUPlatform/IOPMrootDomain
+config(1): creating
+config(0x2a78bde4a57fdc5b): starting on IOPMrootDomain, 10
+config(0x2a78bde4a57fdc5b): terminating
+calling mpo_policy_init for vnguard
+Security policy loaded: Guarded vnode policy (vnguard)
+trust_cache_runtime_init: image4 interface not available, skipping
+unable to find chosen/memory-map in the device tree: -1
+Marking const DATA read-only
+No POST boot-arg set.
+Copyright (c) 1982, 1986, 1989, 1991, 1993
+	The Regents of the University of California. All rights reserved.
+
+bsd_init: calling dev_kmem_init
+bsd_init: calling kauth_init
+bsd_init: calling process_name
+bsd_init: calling get_bsdthread_info
+MAC Framework successfully initialized
+bsd_init: calling chgproccnt
+bsd_init: calling kmem_suballoc
+bsd_init: calling bsd_bufferinit
+using 16384 buffer headers and 10240 cluster IO buffer headers
+bsd_init: calling IOKitInitializeTime
+IOResources: family specific matching fails
+IOQEMUPlatform: ml_set_max_cpus(1) done
+Registering: IOService:/IOQEMUPlatform
+config(1): creating
+IOQEMUPlatform::start - platform registered
+IOQEMUPlatform[0x100000113]::start took 931 ms
+match category exists, skipping IOPanicPlatform[0x100000114]::start(ACPI) <1>
+config(0x2a78bde4a57a45e3): terminating
+config(0x2a78bde4a57fdc5b): starting on IOQEMUPlatform, 10
+config(0x2a78bde4a57fdc5b): terminating
+IOResources: family specific matching fails
+bsd_init: calling vfsinit
+config(0): creating
+ktriage_register_subsystem_strings: set subsystem 8 strings
+bsd_init: calling proc_uuid_policy_init()
+bsd_init: calling mbinit
+mbinit: done [64 MB total pool size, (42/21) split]
+bsd_init: calling audit_init
+bsd_init: calling knote_init
+bsd_init: calling eventhandler_init
+bsd_init: calling aio_init
+New aio workqueue implementation selected
+pthread_init: pthread kext not loaded, skipping
+bsd_init: calling pshm_cache_init
+bsd_init: calling psem_cache_init
+bsd_init: calling nwk_wq_init
+bsd_init: calling dlil_init
+SK: netagent is enabled by default for this platform
+DLIL: running SUM16 self-tests ... PASSED
+dlil_init: Waiting for all the create dlil kernel threads to get scheduled at least once.
+dlil_init: All the created dlil kernel threads have been scheduled at least once. Proceeding.
+bsd_init: calling socketinit
+bsd_init: skipping domaininit (no network kexts)
+bsd_init: skipping skywalk_init (no IOMapper in QEMU)
+bsd_init: skipping necp/netagent/net_aop init (no network kexts)
+bsd_init: calling memorystatus_init
+bsd_init: calling sysctl_mib_init
+bsd_init: calling bsd_autoconf
+bsd_autoconf: calling kminit
+bsd_init: calling loopattach
+ifnet_attach: All kernel threads created for interface lo0 have been scheduled at least once. Proceeding.
+ifnet_attach: Waiting for all kernel threads created for interface gif0 to get scheduled at least once.
+ifnet_attach: All kernel threads created for interface gif0 have been scheduled at least once. Proceeding.
+bsd_init: calling ether_family_init
+headless_register_nexus_domain_provider: failed to register domain provider
+bsd_init: calling net_init_run
+bsd_init: calling inittodr
+bsd_init: calling setconf
+IOFindBSDRoot: entered
+IOFindBSDRoot: waiting for IOBSD resource...
+IOResources: family specific matching fails
+config(0x2a78bde4a58085e3): starting on IOResources, 10
+IOResources: family specific matching fails
+IOFindBSDRoot: IOBSD resource found
+IOFindBSDRoot: rd='md0'
+IOFindBSDRoot: /chosen/memory-map found, RAMDisk property present
+IOFindBSDRoot: RAMDisk propLen=8 base=0x1b43000 size=0x800000
+Added memory device md0/rmd0 (01000000/12000000) at FFFFFF8001B43000 for 0000000000800000
+IOFindBSDRoot: rd=md0, mdevlookup(0) returned 0x1000000
+BSD root: md0, major 1, minor 0
+setRootMedia: IOBlockStorageDriver class not found, skipping media walk
+publishHiddenMedia: IOMedia class not found, skipping
+bsd_init: vfs_mountroot
+spec_open : si_devbsdunit initialized to (0), throttle_mask is (0x0), isssd is (0)
+hfs: mounted Darnix on device b(1, 0)
+bsd_init: calling VFS_ROOT
+bsd_init: calling devfs_kernel_mount
+bsd_init: calling siginit
+bsd_init: calling bsd_utaskbootstrap
+bsd_init: calling mountroot_post_hook
+bsd_init: done
+resume_cluster_powerdown_locked>calling sched_update_powered_cores to resume powerdown
+vm_free_delayed_pages: initialized 0 free pages
+Freeing final unused 307200 bytes from vm_pages[] at 0xffffff8006690000
+vm: initializing swap
+vm: starting swapout thread
+vm: starting swapfile creation thread
+vm: starting swapfile GC thread
+VM Swap Subsystem is ON
+config(0x2a78bde4a58085e3): terminating
+No POST boot-arg set.
+bsd_init: bsd_do_post - donebsdinit_task: opened /dev/console as fd 0
+load_init_program: attempting to load /usr/appleinternal/sbin/launchd.development
+load_init_program: attempting to load /sbin/launchd
+
+
+[38;2;0;210;255m ____    _    ____  _   _ ___ __  __
+[38;2;0;185;230m|  _ \  / \  |  _ \| \ | |_ _\ \/ /
+[38;2;0;160;205m| | | |/ _ \ | |_) |  \| || | \  / 
+[38;2;0;135;180m| |_| / ___ \|  _ <| |\  || | /  \ 
+[38;2;0;110;155m|____/_/   \_\_| \_\_| \_|___/_/\_\
+[0m
+  arch: x86_64
+qemu-system-x86_64: terminating on signal 15 from pid 38130 (<unknown process>)

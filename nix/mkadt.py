@@ -35,6 +35,8 @@ def node(properties, children=None):
 
 dram_base = int(sys.argv[1], 0) if len(sys.argv) > 1 else 0x70000000
 dram_size = int(sys.argv[2], 0) if len(sys.argv) > 2 else 0x40000000
+ramdisk_base = int(sys.argv[3], 0) if len(sys.argv) > 3 else 0
+ramdisk_size = int(sys.argv[4], 0) if len(sys.argv) > 4 else 0
 
 panic_log_size = 0x80000  # 512KB
 panic_log_base = dram_base + dram_size - panic_log_size
@@ -54,9 +56,11 @@ cpus = node([
     prop('name', 'cpus'),
 ], [cpu0])
 
-memory_map = node([
-    prop('name', 'memory-map'),
-])
+memory_map_props = [prop('name', 'memory-map')]
+if ramdisk_base and ramdisk_size:
+    memory_map_props.append(
+        prop('RAMDisk', struct.pack('<QQ', ramdisk_base, ramdisk_size)))
+memory_map = node(memory_map_props)
 
 chosen = node([
     prop('name', 'chosen'),
@@ -64,6 +68,7 @@ chosen = node([
     prop('dram-size', struct.pack('<Q', dram_size)),
     prop('random-seed', bytes(range(1, 65))),
     prop('embedded-panic-log-size', struct.pack('<I', panic_log_size)),
+    prop('kernel-ctrr-to-be-enabled', struct.pack('<I', 0)),
 ], [memory_map])
 
 pram = node([

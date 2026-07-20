@@ -1,4 +1,4 @@
-{ pkgs, inputs, system, buildScriptSrc, qemu }:
+{ pkgs, inputs, system, buildScriptSrc, qemu, llvmLibc }:
 
 # Three independent version axes:
 #
@@ -28,7 +28,7 @@ let
   # Shared kernel boot arguments — common across all architectures.
   commonBootArgs = "-v debug=0x14f keepsyms=1 -s -enable_kprintf_spam atm_diagnostic_config=0x100 -noprogress io=0xff msgbuf=1048576 amfi_get_out_of_my_way=1 cs_enforcement_disable=1";
   x86BootArgs    = "${commonBootArgs} serial=1 rd=md0 ignore_msrs=1";
-  arm64BootArgs  = "${commonBootArgs} serial=3";
+  arm64BootArgs  = "${commonBootArgs} serial=3 rd=md0";
 
   xcodeXip = pkgs.requireFile {
     name = "Xcode_${xcodeVersion}_Apple_silicon.xip";
@@ -302,6 +302,10 @@ let
       sed -i 's/config_darkboot ARM_EXTRAS_BASE/config_darkboot nos_arm_asm ARM_EXTRAS_BASE/' \
         xnu/config/MASTER.arm64.MacOSX
 
+      # Enable HFS and mockfs in arm64 DEVELOPMENT builds (matches x86_64)
+      sed -i 's/FILESYS_DEV =    \[ FILESYS_BASE config_iocount_trace \]/FILESYS_DEV =    [ FILESYS_BASE config_iocount_trace mockfs hfs ]/' \
+        xnu/config/MASTER.arm64.MacOSX
+
       # Provide empty headers for Apple-internal directories
       # that don't exist in the open-source release
       mkdir -p xnu/osfmk/arm64/tunables xnu/osfmk/arm64/ppl
@@ -468,21 +472,19 @@ BOOTARGS_EOF
 
   bootArgs = x86BootArgs;
 
-  initBin = pkgs.runCommand "darnix-init" {
-    nativeBuildInputs = [ pkgs.stdenv.cc ];
+  mkInitBin = arch: let
+    target = if arch == "ARM64" then "arm64-apple-macos" else "x86_64-apple-macos";
+  in pkgs.runCommand "darnix-init-${pkgs.lib.toLower arch}" {
+    nativeBuildInputs = [ pkgs.llvmPackages.clang pkgs.darwin.cctools ];
   } ''
-    clang -target x86_64-apple-macos10.15 -arch x86_64 -fno-builtin \
-        -nostdlib -static -Wl,-e,__start -Wl,-adhoc_codesign -o init ${./init.c}
     mkdir -p $out
-    cp init $out/init
+    clang -target ${target} -nostdlib -static -Wl,-e,__start \
+      -O2 -o $out/init ${./init.c}
   '';
 
-  rootfs-mockfs = pkgs.runCommand "darnix-rootfs-mockfs" {} ''
-    mkdir -p $out
-    cp ${initBin}/init $out/rootfs.dmg
-  '';
-
-  rootfs-hfs = pkgs.runCommand "darnix-rootfs-hfs" {
+  mkRootfsHfs = arch: let
+    initBin = mkInitBin arch;
+  in pkgs.runCommand "darnix-rootfs-hfs-${pkgs.lib.toLower arch}" {
     nativeBuildInputs = [ newfs_hfs xpwn ];
   } ''
     dd if=/dev/zero of=rootfs.dmg bs=1M count=8
@@ -494,6 +496,16 @@ BOOTARGS_EOF
     mkdir -p $out
     cp rootfs.dmg $out/rootfs.dmg
   '';
+
+  mkRootfsMockfs = arch: let
+    initBin = mkInitBin arch;
+  in pkgs.runCommand "darnix-rootfs-mockfs-${pkgs.lib.toLower arch}" {} ''
+    mkdir -p $out
+    cp ${initBin}/init $out/rootfs.dmg
+  '';
+
+  rootfs-hfs = mkRootfsHfs "X86_64";
+  rootfs-mockfs = mkRootfsMockfs "X86_64";
 
   ramBytes = 4 * 1024 * 1024 * 1024;
 
@@ -515,6 +527,9 @@ BOOTARGS_EOF
       + pkgs.lib.optionalString (kernelConfig != "DEVELOPMENT")
           ("-" + lc kernelConfig);
 
+    targetRootfsHfs = mkRootfsHfs arch;
+    targetRootfsMockfs = mkRootfsMockfs arch;
+
     boot = if arch == "ARM64" then arm64Boot else x86Boot;
 
     # ── ARM64 boot: stub firmware + flat kernel + ADT + debug harness ──
@@ -535,9 +550,16 @@ BOOTARGS_EOF
     } ''
       mkdir -p $out
       KERNEL_FILE=${kernelPath}
+      ROOTFS=${targetRootfsHfs}/rootfs.dmg
+
+      ROOTFS_SIZE=$(wc -c < "$ROOTFS")
+      ROOTFS_PAGES=$(( (ROOTFS_SIZE + 4095) / 4096 ))
+      ROOTFS_ALIGNED=$(( ROOTFS_PAGES * 4096 ))
+      PANIC_SIZE=0x80000
+      RAMDISK_BASE=$(printf "0x%x" $(( ${dram_base} + ${mem_size} - PANIC_SIZE - ROOTFS_ALIGNED )))
 
       python3 ${./macho2bin.py} "$KERNEL_FILE" $out
-      python3 ${./mkadt.py} ${dram_base} ${mem_size} > $out/adt.bin
+      python3 ${./mkadt.py} ${dram_base} ${mem_size} "$RAMDISK_BASE" "$ROOTFS_SIZE" > $out/adt.bin
       ADT_SIZE=$(wc -c < $out/adt.bin)
 
       ENTRY_OFF=$(cat $out/entry_offset)
@@ -567,14 +589,17 @@ BOOTARGS_EOF
       ld -arch arm64 -e _start -static -pagezero_size 0 -image_base ${fw_phys} -o stub stub.o
       segedit stub -extract __TEXT __text $out/fw.bin
 
+      cp "$ROOTFS" $out/rootfs.dmg
+
       echo "${kernel_phys}" > $out/kernel_phys
       echo "${adt_phys}" > $out/adt_phys
+      echo "$RAMDISK_BASE" > $out/ramdisk_phys
 
       cat > $out/debug.lldb << DBEOF
 target create $KERNEL_FILE
 command script import ${./klog.py}
 settings set plugin.process.gdb-remote.packet-timeout 10
-gdb-remote localhost:1234
+gdb-remote localhost:4321
 breakpoint set -a $KERNEL_ENTRY -N kernel_entry
 klog $VIRT_BASE ${kernel_phys}
 DBEOF
@@ -615,8 +640,8 @@ GRUBEOF
           --modules="xnu xnu_uuid part_gpt part_msdos fat hfsplus normal boot configfile" \
           "boot/grub/grub.cfg=grub.cfg" \
           "boot/kernel=$KERNEL_FILE" \
-          "boot/rootfs-hfs.dmg=${rootfs-hfs}/rootfs.dmg" \
-          "boot/rootfs-mockfs.dmg=${rootfs-mockfs}/rootfs.dmg" \
+          "boot/rootfs-hfs.dmg=${targetRootfsHfs}/rootfs.dmg" \
+          "boot/rootfs-mockfs.dmg=${targetRootfsMockfs}/rootfs.dmg" \
           "''${KEXT_ARGS[@]}"
 
       mkfs.fat -C -F 32 esp.img 65536 >/dev/null
@@ -631,7 +656,7 @@ GRUBEOF
 target create $out/${kernelFile}
 command script import ${./klog.py}
 settings set plugin.process.gdb-remote.packet-timeout 10
-gdb-remote localhost:1234
+gdb-remote localhost:4321
 klog
 DBEOF
     '';
@@ -640,6 +665,7 @@ DBEOF
     bootSetup = if arch == "ARM64" then ''
       KERNEL_PHYS=$(cat ${boot}/kernel_phys)
       ADT_PHYS=$(cat ${boot}/adt_phys)
+      RAMDISK_PHYS=$(cat ${boot}/ramdisk_phys)
       dd if=/dev/zero of="$WORKDIR/aux.img" bs=1M count=1 2>/dev/null
       dd if=/dev/zero of="$WORKDIR/root.img" bs=1M count=1 2>/dev/null
     '' else ''
@@ -661,7 +687,8 @@ DBEOF
         -drive "file=$WORKDIR/root.img,if=pflash,format=raw"
         -device "loader,file=${boot}/kernel.bin,addr=$KERNEL_PHYS,force-raw=on"
         -device "loader,file=${boot}/adt.bin,addr=$ADT_PHYS,force-raw=on"
-        -s -no-reboot
+        -device "loader,file=${boot}/rootfs.dmg,addr=$RAMDISK_PHYS,force-raw=on"
+        -no-reboot
       )
     '' else ''
       QEMU_BIN=${qemu}/bin/qemu-system-x86_64
@@ -673,7 +700,7 @@ DBEOF
         -drive "file=${boot}/esp.img,format=raw,if=virtio,readonly=on"
         $SERIAL_ARG
         -display none -monitor none
-        -s -no-reboot
+        -no-reboot
       )
     '';
 
@@ -709,7 +736,7 @@ DBEOF
       ${qemuArgsDef}
 
       if [ "$DEBUG" -eq 1 ]; then
-        QEMU_ARGS+=(-S)
+        QEMU_ARGS+=(-gdb tcp::4321 -S)
         "$QEMU_BIN" "''${QEMU_ARGS[@]}" &
         QEMU_PID=$!
         trap "kill $QEMU_PID 2>/dev/null; rm -rf $WORKDIR" EXIT INT TERM
@@ -721,7 +748,69 @@ DBEOF
       fi
     '';
 
-  in { inherit kernel boot run; };
+    testBoot = pkgs.writeShellScriptBin "darnix-test-boot" ''
+      export PATH="${pkgs.coreutils}/bin:$PATH"
+      set -euo pipefail
+      WORKDIR=$(mktemp -d)
+      trap "rm -rf $WORKDIR" EXIT
+      LOGFILE="/tmp/darnix-boot-${shortLabel}.txt"
+      echo "=== Darnix boot test: ${shortLabel} ==="
+
+      ${bootSetup}
+      ${if arch == "X86_64" then ''SERIAL_ARG="-serial stdio"'' else ""}
+      ${qemuArgsDef}
+
+      "$QEMU_BIN" "''${QEMU_ARGS[@]}" > "$LOGFILE" 2>&1 &
+      QEMU_PID=$!
+      trap "kill $QEMU_PID 2>/dev/null; rm -rf $WORKDIR" EXIT
+
+      while kill -0 $QEMU_PID 2>/dev/null; do
+        if grep -q "DARNIX BOOT COMPLETE" "$LOGFILE" 2>/dev/null; then
+          kill $QEMU_PID 2>/dev/null
+          break
+        fi
+        sleep 1
+      done
+      wait $QEMU_PID 2>/dev/null || true
+
+      PASS=0
+      FAIL=0
+      check() {
+        if grep -q "$2" "$LOGFILE"; then
+          echo "  PASS: $1"
+          PASS=$((PASS + 1))
+        else
+          echo "  FAIL: $1"
+          FAIL=$((FAIL + 1))
+        fi
+      }
+
+      check "kernel version"       "Darwin Kernel Version"
+      check "HFS mount"            "hfs: mounted Darnix"
+      check "BSD root"             "BSD root: md0"
+      check "init loaded"          "load_init_program"
+      check "console opened"       "opened /dev/console"
+      check "Darnix banner"        "Welcome to Darnix"
+      check "boot complete"       "DARNIX BOOT COMPLETE"
+      check "arch: ${if arch == "ARM64" then "arm64" else "x86_64"}" \
+            "arch: ${if arch == "ARM64" then "arm64" else "x86_64"}"
+
+      echo ""
+      UNAME=$(grep "Darwin Kernel Version" "$LOGFILE" | head -1 | sed 's/.*\(Darwin Kernel Version [0-9.]*\).*/\1/')
+      echo "  uname: $UNAME"
+      echo ""
+      echo "=== Results: $PASS passed, $FAIL failed ==="
+      echo "  log: $LOGFILE"
+
+      if [ "$FAIL" -gt 0 ]; then
+        echo ""
+        echo "=== Last 30 lines ==="
+        tail -30 "$LOGFILE"
+        exit 1
+      fi
+    '';
+
+  in { inherit kernel boot run testBoot; };
 
   targets = {
     arm64  = mkTarget { arch = "ARM64"; };
@@ -738,6 +827,8 @@ in {
     boot-x86_64 = targets.x86_64.boot;
     run-arm64  = targets.arm64.run;
     run-x86_64 = targets.x86_64.run;
+    test-boot-arm64  = targets.arm64.testBoot;
+    test-boot-x86_64 = targets.x86_64.testBoot;
     default = targets.arm64.run;
   };
   apps = {
@@ -755,5 +846,17 @@ in {
       type = "app";
       program = "${targets.x86_64.run}/bin/darnix-run";
     };
+    test-boot-arm64 = {
+      type = "app";
+      program = "${targets.arm64.testBoot}/bin/darnix-test-boot";
+    };
+    test-boot-x86_64 = {
+      type = "app";
+      program = "${targets.x86_64.testBoot}/bin/darnix-test-boot";
+    };
+  };
+  checks = {
+    boot-arm64  = targets.arm64.testBoot;
+    boot-x86_64 = targets.x86_64.testBoot;
   };
 }
