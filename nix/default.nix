@@ -430,6 +430,13 @@ BOOTARGS_EOF
       mkdir -p $out
       cp -R build/xnu.obj/* $out/
     '';
+
+    meta = {
+      description = "Apple XNU kernel (${arch})";
+      homepage = "https://github.com/apple-oss-distributions/xnu";
+      license = pkgs.lib.licenses.apsl20;
+      platforms = [ "aarch64-darwin" "x86_64-darwin" ];
+    };
   };
 
   xnu-arm64  = mkXnu { arch = "ARM64";  machine = "VMAPPLE"; };
@@ -817,6 +824,14 @@ DBEOF
     x86_64 = mkTarget { arch = "X86_64"; };
   };
 
+  darnixMeta = {
+    description = "Darnix — boot Apple's XNU kernel entirely from Nix";
+    homepage = "https://github.com/jonhermansen/darnix";
+    license = pkgs.lib.licenses.mit;
+    platforms = [ "aarch64-darwin" "x86_64-darwin" ];
+    mainProgram = "darnix-run";
+  };
+
 in {
   packages = {
     inherit xcode kdk qemu grubEfi newfs_hfs xpwn;
@@ -837,22 +852,27 @@ in {
       program = if system == "aarch64-darwin"
         then "${targets.arm64.run}/bin/darnix-run"
         else "${targets.x86_64.run}/bin/darnix-run";
+      meta = darnixMeta;
     };
     arm64 = {
       type = "app";
       program = "${targets.arm64.run}/bin/darnix-run";
+      meta = darnixMeta;
     };
     x86_64 = {
       type = "app";
       program = "${targets.x86_64.run}/bin/darnix-run";
+      meta = darnixMeta;
     };
     test-boot-arm64 = {
       type = "app";
       program = "${targets.arm64.testBoot}/bin/darnix-test-boot";
+      meta = darnixMeta;
     };
     test-boot-x86_64 = {
       type = "app";
       program = "${targets.x86_64.testBoot}/bin/darnix-test-boot";
+      meta = darnixMeta;
     };
   };
   checks = {
