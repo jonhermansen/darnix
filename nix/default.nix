@@ -131,16 +131,22 @@ let
     esac
   '';
 
-  xcode = pkgs.runCommand "xcode-${xcodeVersion}" {
+  xcode = (pkgs.runCommand "xcode-${xcodeVersion}" {
     nativeBuildInputs = [ pkgs.xar pkgs.pbzx pkgs.cpio ];
   } ''
     xar -xf ${xcodeXip}
     pbzx -n Content | cpio -i
     mkdir -p $out
     mv Xcode.app $out/
-  '';
+  '').overrideAttrs {
+    meta = {
+      description = "Apple Xcode ${xcodeVersion}";
+      homepage = "https://developer.apple.com/xcode/";
+      license = pkgs.lib.licenses.unfree;
+    };
+  };
 
-  kdk = pkgs.runCommand "kdk-${kdkVersion}-${macosBuild}" {
+  kdk = (pkgs.runCommand "kdk-${kdkVersion}-${macosBuild}" {
     nativeBuildInputs = [ pkgs.p7zip pkgs.xar pkgs.cpio pkgs.pbzx ];
   } ''
     7z x ${kdkDmg}
@@ -148,7 +154,13 @@ let
     mkdir -p $out/${kdkName}
     (cd $out/${kdkName} && pbzx -n $NIX_BUILD_TOP/KDK.pkg/Payload     | cpio -i)
     (cd $out/${kdkName} && pbzx -n $NIX_BUILD_TOP/KDK_SDK.pkg/Payload | cpio -i)
-  '';
+  '').overrideAttrs {
+    meta = {
+      description = "Apple Kernel Debug Kit ${kdkVersion}";
+      homepage = "https://developer.apple.com/download/all/";
+      license = pkgs.lib.licenses.unfree;
+    };
+  };
 
   ctftools = pkgs.stdenv.mkDerivation {
     pname = "ctftools";
