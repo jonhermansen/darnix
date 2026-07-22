@@ -93,7 +93,25 @@ static int sys_nanosleep(const struct timespec *req, struct timespec *rem) {
 	return (int)syscall3(SYS_nanosleep, (long)req, (long)rem, 0);
 }
 static int sys_sysctl(int *name, unsigned int namelen, void *oldp, unsigned long *oldlenp) {
+#ifdef __x86_64__
+	int ret;
+	__asm__ volatile(
+	    "movq $0x20000CA,%%rax\n"
+	    "movq %1,%%rdi\n"
+	    "movl %2,%%esi\n"
+	    "movq %3,%%rdx\n"
+	    "movq %4,%%r10\n"
+	    "xorq %%r8,%%r8\n"
+	    "xorq %%r9,%%r9\n"
+	    "syscall\n"
+	    "movl %%eax,%0"
+	    : "=r"(ret)
+	    : "r"(name), "r"(namelen), "r"(oldp), "r"(oldlenp)
+	    : "rax","rdi","rsi","rdx","r10","r8","r9","rcx","r11","memory");
+	return ret;
+#else
 	return (int)syscall6(SYS_sysctl, (long)name, namelen, (long)oldp, (long)oldlenp, 0, 0);
+#endif
 }
 
 __attribute__((no_builtin("strlen")))
