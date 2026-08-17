@@ -34,15 +34,23 @@ jobs:
 
       - uses: DeterminateSystems/magic-nix-cache-action@908b263ff629f4cc17666315b7fd3ec127c6244d # v14
 
+      - name: Check virtualization support
+        run: |
+          echo "sysctl hw.optional.arm.FEAT_VHE:"
+          sysctl hw.optional.arm.FEAT_VHE || true
+          echo "kern.hv_support:"
+          sysctl kern.hv_support || true
+          echo "Entitlements on this process:"
+          codesign -d --entitlements - /bin/sh 2>&1 || true
+
       - name: Fetch Xcode and KDK from R2
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: |
-          brew install awscli
-          aws s3 cp s3://darnix-private/Xcode_26.4.1_Apple_silicon.xip ./Xcode_26.4.1_Apple_silicon.xip \
+          nix run .#awscli -- s3 cp s3://darnix-private/Xcode_26.4.1_Apple_silicon.xip ./Xcode_26.4.1_Apple_silicon.xip \
             --endpoint-url "$R2_ENDPOINT" --quiet
-          aws s3 cp s3://darnix-private/Kernel_Debug_Kit_26.4.1_build_25E253.dmg ./Kernel_Debug_Kit_26.4.1_build_25E253.dmg \
+          nix run .#awscli -- s3 cp s3://darnix-private/Kernel_Debug_Kit_26.4.1_build_25E253.dmg ./Kernel_Debug_Kit_26.4.1_build_25E253.dmg \
             --endpoint-url "$R2_ENDPOINT" --quiet
 
       - name: Add Xcode and KDK to nix store
