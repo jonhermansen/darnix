@@ -435,13 +435,30 @@ BOOTARGS_EOF
       export RC_ProjectSourceVersion=${xnuVersion}
       export HOME=$TMPDIR
       export BUILD_LTO=${if withLTO then "1" else "0"}
+      export SOURCE_DATE_EPOCH=0
+      export KERNEL_BUILD_DATE="Thu Jan  1 00:00:00 UTC 1970"
+      export KERNEL_BUILD_OBJROOT="xnu-${xnuVersion}/${kernelConfig}_${arch}"
       bash ./build.sh
     '';
 
     installPhase = ''
       mkdir -p $out
       cp -R build/xnu.obj/* $out/
+      # Remove build artifacts that embed Xcode/KDK store paths,
+      # preventing them from leaking into the runtime closure.
+      find $out -name '*.json' -o -name '*.d' -o -name '*.cpd' -o -name '.*FLAGS' | xargs rm -f
+      find $out \( -name '*.o' -o -name '*.a' -o -name '*.ctf' -o -name '*.ctfdata' \) \
+        -not -name 'kernel.*' -delete
+      # Nuke any remaining store path references baked into binaries
+      find $out -type f -exec ${pkgs.removeReferencesTo}/bin/remove-references-to \
+        -t ${xcode} -t ${kdk} {} + 2>/dev/null || true
     '';
+
+    # Xcode and KDK are Apple-proprietary build inputs that must not
+    # appear in the output closure — embedding their store paths would
+    # make the kernel output non-redistributable and bloat the cache
+    # (~13 GB).  This assertion fails the build if any reference leaks.
+    disallowedReferences = [ xcode kdk ];
 
     meta = {
       description = "Apple XNU kernel (${arch})";
@@ -497,8 +514,8 @@ BOOTARGS_EOF
     nativeBuildInputs = [ pkgs.llvmPackages.clang pkgs.darwin.cctools ];
   } ''
     mkdir -p $out
-    clang -target ${target} -nostdlib -static -Wl,-e,__start \
-      -O2 -o $out/init ${./init.c}
+    clang -target ${target} -DDARNIX_NOLIBC -nostdlib -static -Wl,-e,__start \
+      -O2 -fno-stack-protector -o $out/init ${./init.c}
   '';
 
   mkRootfsHfs = arch: let

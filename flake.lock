@@ -216,11 +216,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1779767059,
-        "narHash": "sha256-7N6ldGMMWOEXx8VpYWeZfleyIGPKdpc8nB52nBqjZHE=",
+        "lastModified": 1784816583,
+        "narHash": "sha256-gXz5OKCSaVROJy/AtMLzvMp/AmOM/feLNKQGcN2Gco4=",
         "owner": "jonhermansen",
         "repo": "llvm-project",
-        "rev": "aad8f199265f332498b608775578945e5d5df856",
+        "rev": "3f4926c449832679f9ac4a418ff493e21218074d",
         "type": "github"
       },
       "original": {
