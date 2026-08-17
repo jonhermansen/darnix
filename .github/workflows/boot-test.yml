@@ -16,11 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - arch: arm64
-            accel: hvf
-          - arch: x86_64
-            accel: tcg
+        arch: [arm64, x86_64]
     runs-on: macos-26
     timeout-minutes: 60
     env:

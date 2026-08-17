@@ -543,7 +543,9 @@ BOOTARGS_EOF
   rootfs-hfs = mkRootfsHfs "X86_64";
   rootfs-mockfs = mkRootfsMockfs "X86_64";
 
-  ramBytes = 4 * 1024 * 1024 * 1024;
+  # 512MB keeps the arm64 vmapple address space under 2.5GB, letting TCG
+  # mmap the guest without exhausting host RAM on CI runners (7GB).
+  ramBytes = 512 * 1024 * 1024;
 
   # mkTarget { arch, kernelConfig } → { kernel, boot, run }
   #
@@ -715,8 +717,17 @@ DBEOF
 
     qemuArgsDef = if arch == "ARM64" then ''
       QEMU_BIN=${qemu}/bin/qemu-system-aarch64
+      # HVF requires the Hypervisor.framework entitlement, which is only
+      # available on bare-metal Apple Silicon. CI runners (and VMs without
+      # nested virt) lack kern.hv_support, so we fall back to TCG — QEMU's
+      # software emulator. --tcg forces TCG even when HVF is available.
+      if [ "$FORCE_TCG" -eq 1 ] || ! sysctl -n kern.hv_support 2>/dev/null | grep -q 1; then
+        ACCEL="-accel tcg -cpu max"
+      else
+        ACCEL="-accel hvf"
+      fi
       QEMU_ARGS=(
-        -M vmapple -accel hvf
+        -M vmapple $ACCEL
         -m ${toString ramBytes}B -nographic
         -bios ${boot}/fw.bin
         -pflash "$WORKDIR/aux.img"
@@ -759,10 +770,12 @@ DBEOF
       ${bootSetup}
 
       DEBUG=0
+      FORCE_TCG=0
       for arg in "$@"; do
         case "$arg" in
           --gdb)    DEBUG=1 ;;
           --serial) SERIAL_ARG="-serial stdio" ;;
+          --tcg)    FORCE_TCG=1 ;;
         esac
       done
 
@@ -791,6 +804,13 @@ DBEOF
       trap "rm -rf $WORKDIR" EXIT
       LOGFILE="/tmp/darnix-boot-${shortLabel}.txt"
       echo "=== Darnix boot test: ${shortLabel} ==="
+
+      FORCE_TCG=0
+      for arg in "$@"; do
+        case "$arg" in
+          --tcg) FORCE_TCG=1 ;;
+        esac
+      done
 
       ${bootSetup}
       ${if arch == "X86_64" then ''SERIAL_ARG="-serial stdio"'' else ""}
@@ -864,6 +884,7 @@ DBEOF
 in {
   packages = {
     inherit xcode kdk qemu grubEfi newfs_hfs xpwn;
+    awscli = pkgs.awscli2;
     inherit rootfs-mockfs rootfs-hfs;
     xnu-arm64  = targets.arm64.kernel;
     xnu-x86_64 = targets.x86_64.kernel;
