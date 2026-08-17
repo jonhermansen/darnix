@@ -16,7 +16,7 @@
 let
   # -- Version pins (see comment above for update rules) --
   xcodeVersion    = "26.4.1";
-  xcodeHash       = "sha256-ydLjr+g/1V9TuzXvJZdBNR8zJ9HxGj9KX7kNXCONtKI=";
+  xcodeHash       = "sha256-4mmO81Dls4dAEysRENAr0iof65KMPgGcFo03POAOP/o=";
   macosVersion    = "26.4";
   macosBuild      = "25E253";
   xnuVersion      = "12377.101.15";
@@ -31,9 +31,9 @@ let
   arm64BootArgs  = "${commonBootArgs} serial=3 rd=md0";
 
   xcodeXip = pkgs.requireFile {
-    name = "Xcode_${xcodeVersion}_Apple_silicon.xip";
+    name = "Xcode_${xcodeVersion}_Universal.xip";
     hash = xcodeHash;
-    url = "https://download.developer.apple.com/Developer_Tools/Xcode_${xcodeVersion}/Xcode_${xcodeVersion}_Apple_silicon.xip";
+    url = "https://download.developer.apple.com/Developer_Tools/Xcode_${xcodeVersion}/Xcode_${xcodeVersion}_Universal.xip";
   };
 
   kdkDmg = pkgs.requireFile {
@@ -715,19 +715,37 @@ DBEOF
       SERIAL_ARG="-serial file:$SERIAL_LOG"
     '';
 
+    # Map nix arch to uname -m value for host/guest comparison
+    guestUname = if arch == "ARM64" then "arm64" else "x86_64";
+
+    # Detect the best QEMU accelerator at runtime.
+    # Hardware accel (HVF/KVM) only works for same-arch host/guest.
+    # --tcg forces software emulation regardless.
+    accelDetect = ''
+      GUEST_ARCH="${guestUname}"
+      HOST_ARCH=$(uname -m)
+      if [ "$FORCE_TCG" -eq 1 ]; then
+        ACCEL="-accel tcg"
+      elif [ "$GUEST_ARCH" != "$HOST_ARCH" ]; then
+        ACCEL="-accel tcg"
+      elif [ "$(uname)" = "Darwin" ] && sysctl -n kern.hv_support 2>/dev/null | grep -q 1; then
+        ACCEL="-accel hvf"
+      elif [ "$(uname)" = "Linux" ] && [ -e /dev/kvm ]; then
+        ACCEL="-accel kvm"
+      else
+        ACCEL="-accel tcg"
+      fi
+    '';
+
     qemuArgsDef = if arch == "ARM64" then ''
       QEMU_BIN=${qemu}/bin/qemu-system-aarch64
-      # HVF requires the Hypervisor.framework entitlement, which is only
-      # available on bare-metal Apple Silicon. CI runners (and VMs without
-      # nested virt) lack kern.hv_support, so we fall back to TCG — QEMU's
-      # software emulator. --tcg forces TCG even when HVF is available.
-      if [ "$FORCE_TCG" -eq 1 ] || ! sysctl -n kern.hv_support 2>/dev/null | grep -q 1; then
-        ACCEL="-accel tcg -cpu max"
-      else
-        ACCEL="-accel hvf"
+      ${accelDetect}
+      CPU_ARG=""
+      if [[ "$ACCEL" == *tcg* ]]; then
+        CPU_ARG="-cpu max"
       fi
       QEMU_ARGS=(
-        -M vmapple $ACCEL
+        -M vmapple $CPU_ARG $ACCEL
         -m ${toString ramBytes}B -nographic
         -bios ${boot}/fw.bin
         -pflash "$WORKDIR/aux.img"
@@ -739,9 +757,15 @@ DBEOF
       )
     '' else ''
       QEMU_BIN=${qemu}/bin/qemu-system-x86_64
+      ${accelDetect}
+      # TCG needs an explicit CPU model; HVF/KVM use the host CPU.
+      CPU_ARG=""
+      if [[ "$ACCEL" == *tcg* ]]; then
+        CPU_ARG='-cpu Haswell-noTSX,vendor=GenuineIntel,stepping=4'
+      fi
       QEMU_ARGS=(
         -machine q35 -m ${toString ramBytes}B -smp 1
-        -cpu "Haswell-noTSX,vendor=GenuineIntel,stepping=4"
+        $CPU_ARG $ACCEL
         -drive "if=pflash,format=raw,readonly=on,file=$OVMF"
         -drive "if=pflash,format=raw,file=$WORKDIR/ovmf-vars.fd"
         -drive "file=${boot}/esp.img,format=raw,if=virtio,readonly=on"
@@ -799,26 +823,23 @@ DBEOF
 
     testBoot = pkgs.writeShellScriptBin "darnix-test-boot" ''
       export PATH="${pkgs.coreutils}/bin:$PATH"
-      set -euo pipefail
+      set -eux -o pipefail
       WORKDIR=$(mktemp -d)
       trap "rm -rf $WORKDIR" EXIT
       LOGFILE="/tmp/darnix-boot-${shortLabel}.txt"
       echo "=== Darnix boot test: ${shortLabel} ==="
 
-      FORCE_TCG=0
-      for arg in "$@"; do
-        case "$arg" in
-          --tcg) FORCE_TCG=1 ;;
-        esac
-      done
+      # Tests always use TCG + icount for deterministic, reproducible output.
+      FORCE_TCG=1
 
       ${bootSetup}
       ${if arch == "X86_64" then ''SERIAL_ARG="-serial stdio"'' else ""}
       ${qemuArgsDef}
+      QEMU_ARGS+=(-icount "shift=auto")
 
       "$QEMU_BIN" "''${QEMU_ARGS[@]}" > "$LOGFILE" 2>&1 &
       QEMU_PID=$!
-      trap "kill $QEMU_PID 2>/dev/null; rm -rf $WORKDIR" EXIT
+      trap "kill $QEMU_PID 2>/dev/null || true; rm -rf $WORKDIR" EXIT
 
       while kill -0 $QEMU_PID 2>/dev/null; do
         if grep -q "DARNIX BOOT COMPLETE" "$LOGFILE" 2>/dev/null; then
@@ -864,9 +885,89 @@ DBEOF
         tail -30 "$LOGFILE"
         exit 1
       fi
+      exit 0
     '';
 
-  in { inherit kernel boot run testBoot; };
+    # Whether this is a same-arch check (host can run guest natively).
+    # icount is only worth the cost on same-arch; cross-arch just checks the boot succeeds.
+    hostUname = builtins.head (pkgs.lib.splitString "-" system);
+    hostArch = if hostUname == "aarch64" then "arm64" else hostUname;
+    sameArch = hostArch == guestUname;
+
+    # Check derivation: actually runs the boot test inside nix build.
+    # TCG is pure userspace — no HVF/KVM/network needed.
+    checkBoot = pkgs.runCommand "darnix-check-boot-${shortLabel}" {
+      nativeBuildInputs = [ qemu pkgs.coreutils pkgs.gnugrep pkgs.gnused ];
+    } ''
+      set -eux -o pipefail
+      WORKDIR=$(mktemp -d)
+      LOGFILE="$WORKDIR/boot.log"
+      FORCE_TCG=1
+
+      ${bootSetup}
+      ${if arch == "X86_64" then ''SERIAL_ARG="-serial stdio"'' else ""}
+      ${qemuArgsDef}
+      ${if sameArch then ''QEMU_ARGS+=(-icount "shift=auto")'' else ""}
+
+      "$QEMU_BIN" "''${QEMU_ARGS[@]}" > "$LOGFILE" 2>&1 &
+      QEMU_PID=$!
+
+      TIMEOUT=900
+      ELAPSED=0
+      while kill -0 $QEMU_PID 2>/dev/null; do
+        if grep -q "DARNIX BOOT COMPLETE" "$LOGFILE" 2>/dev/null; then
+          kill $QEMU_PID 2>/dev/null
+          break
+        fi
+        if [ "$ELAPSED" -ge "$TIMEOUT" ]; then
+          kill $QEMU_PID 2>/dev/null || true
+          echo "TIMEOUT after ''${TIMEOUT}s"
+          cat "$LOGFILE"
+          exit 1
+        fi
+        sleep 1
+        ELAPSED=$((ELAPSED + 1))
+      done
+      wait $QEMU_PID 2>/dev/null || true
+
+      PASS=0
+      FAIL=0
+      check() {
+        if grep -q "$2" "$LOGFILE"; then
+          echo "  PASS: $1"
+          PASS=$((PASS + 1))
+        else
+          echo "  FAIL: $1"
+          FAIL=$((FAIL + 1))
+        fi
+      }
+
+      check "kernel version"       "Darwin Kernel Version"
+      check "HFS mount"            "hfs: mounted Darnix"
+      check "BSD root"             "BSD root: md0"
+      check "init loaded"          "load_init_program"
+      check "console opened"       "opened /dev/console"
+      check "Darnix banner"        "Welcome to Darnix"
+      check "boot complete"       "DARNIX BOOT COMPLETE"
+      check "arch: ${if arch == "ARM64" then "arm64" else "x86_64"}" \
+            "arch: ${if arch == "ARM64" then "arm64" else "x86_64"}"
+
+      echo ""
+      echo "=== Results: $PASS passed, $FAIL failed ==="
+
+      if [ "$FAIL" -gt 0 ]; then
+        echo ""
+        echo "=== Last 30 lines ==="
+        tail -30 "$LOGFILE"
+        exit 1
+      fi
+
+      mkdir -p $out
+      cp "$LOGFILE" $out/boot.log
+      rm -rf "$WORKDIR"
+    '';
+
+  in { inherit kernel boot run testBoot checkBoot; };
 
   targets = {
     arm64  = mkTarget { arch = "ARM64"; };
@@ -925,8 +1026,10 @@ in {
       meta = darnixMeta;
     };
   };
+  # Both archs run on any host via TCG. Native-arch gets -icount
+  # for deterministic output; cross-arch skips it (too slow).
   checks = {
-    boot-arm64  = targets.arm64.testBoot;
-    boot-x86_64 = targets.x86_64.testBoot;
+    boot-arm64  = targets.arm64.checkBoot;
+    boot-x86_64 = targets.x86_64.checkBoot;
   };
 }

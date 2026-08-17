@@ -16,8 +16,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [arm64, x86_64]
-    runs-on: macos-26
+        include:
+          - arch: arm64
+            runner: macos-26
+            system: aarch64-darwin
+          - arch: x86_64
+            runner: macos-26-intel
+            system: x86_64-darwin
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     env:
       R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
@@ -44,19 +50,19 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: |
-          nix run .#awscli -- s3 cp s3://darnix-private/Xcode_26.4.1_Apple_silicon.xip ./Xcode_26.4.1_Apple_silicon.xip \
+          nix run .#awscli -- s3 cp s3://darnix-private/Xcode_26.4.1_Universal.xip ./Xcode_26.4.1_Universal.xip \
             --endpoint-url "$R2_ENDPOINT" --quiet
           nix run .#awscli -- s3 cp s3://darnix-private/Kernel_Debug_Kit_26.4.1_build_25E253.dmg ./Kernel_Debug_Kit_26.4.1_build_25E253.dmg \
             --endpoint-url "$R2_ENDPOINT" --quiet
 
       - name: Add Xcode and KDK to nix store
         run: |
-          nix-store --add-fixed sha256 ./Xcode_26.4.1_Apple_silicon.xip
+          nix-store --add-fixed sha256 ./Xcode_26.4.1_Universal.xip
           nix-store --add-fixed sha256 ./Kernel_Debug_Kit_26.4.1_build_25E253.dmg
-          rm -f ./Xcode_26.4.1_Apple_silicon.xip ./Kernel_Debug_Kit_26.4.1_build_25E253.dmg
+          rm -f ./Xcode_26.4.1_Universal.xip ./Kernel_Debug_Kit_26.4.1_build_25E253.dmg
 
       - name: Build
-        run: nix build .#packages.aarch64-darwin.run-${{ matrix.arch }} --print-out-paths
+        run: nix build .#packages.${{ matrix.system }}.run-${{ matrix.arch }} --print-out-paths
 
       # Xcode (~2.2 GB) and KDK (~1.2 GB) are fetched fresh from R2 each run.
       # Delete them from the store so magic-nix-cache doesn't persist them
@@ -64,11 +70,11 @@ jobs:
       - name: Evict Xcode/KDK from store
         if: always()
         run: |
-          nix-store --delete "$(nix eval --raw .#packages.aarch64-darwin.xcode.outPath)"
-          nix-store --delete "$(nix eval --raw .#packages.aarch64-darwin.kdk.outPath)"
+          nix-store --delete "$(nix eval --raw .#packages.${{ matrix.system }}.xcode.outPath)"
+          nix-store --delete "$(nix eval --raw .#packages.${{ matrix.system }}.kdk.outPath)"
 
       - name: Boot test
-        run: nix run .#packages.aarch64-darwin.test-boot-${{ matrix.arch }}
+        run: nix run .#packages.${{ matrix.system }}.test-boot-${{ matrix.arch }}
 
       - name: Upload boot log
         if: always()
