@@ -17,28 +17,51 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-15
-            arch: arm64
+          - arch: arm64
             accel: hvf
-          - runner: macos-15
-            arch: x86_64
+          - arch: x86_64
             accel: tcg
-          - runner: macos-13
-            arch: x86_64
-            accel: hvf
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 30
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
 
-      - uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
-        with:
-          nix_path: nixpkgs=channel:nixpkgs-unstable
+      - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+
+      - uses: DeterminateSystems/magic-nix-cache-action@908b263ff629f4cc17666315b7fd3ec127c6244d # v14
+
+      - name: Fetch Xcode and KDK from R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          brew install awscli
+          aws s3 cp s3://darnix-private/Xcode_26.4.1_Apple_silicon.xip ./Xcode_26.4.1_Apple_silicon.xip \
+            --endpoint-url "$R2_ENDPOINT" --quiet
+          aws s3 cp s3://darnix-private/Kernel_Debug_Kit_26.4.1_build_25E253.dmg ./Kernel_Debug_Kit_26.4.1_build_25E253.dmg \
+            --endpoint-url "$R2_ENDPOINT" --quiet
+
+      - name: Add Xcode and KDK to nix store
+        run: |
+          nix-store --add-fixed sha256 ./Xcode_26.4.1_Apple_silicon.xip
+          nix-store --add-fixed sha256 ./Kernel_Debug_Kit_26.4.1_build_25E253.dmg
+          rm -f ./Xcode_26.4.1_Apple_silicon.xip ./Kernel_Debug_Kit_26.4.1_build_25E253.dmg
 
       - name: Build
         run: nix build .#packages.aarch64-darwin.run-${{ matrix.arch }} --print-out-paths
+
+      # Xcode (~2.2 GB) and KDK (~1.2 GB) are fetched fresh from R2 each run.
+      # Delete them from the store so magic-nix-cache doesn't persist them
+      # into the 10 GB GitHub Actions cache.
+      - name: Evict Xcode/KDK from store
+        if: always()
+        run: |
+          nix-store --delete "$(nix eval --raw .#packages.aarch64-darwin.xcode.outPath)"
+          nix-store --delete "$(nix eval --raw .#packages.aarch64-darwin.kdk.outPath)"
 
       - name: Boot test
         run: nix run .#packages.aarch64-darwin.test-boot-${{ matrix.arch }}
@@ -47,5 +70,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: boot-${{ matrix.arch }}-${{ matrix.runner }}
+          name: boot-${{ matrix.arch }}
           path: /tmp/darnix-boot-*.txt
