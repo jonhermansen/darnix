@@ -138,18 +138,37 @@
         "type": "github"
       }
     },
+    "flake-utils_3": {
+      "inputs": {
+        "systems": "systems_3"
+      },
+      "locked": {
+        "lastModified": 1731533236,
+        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
     "grub-src": {
       "inputs": {
+        "flake-utils": "flake-utils_2",
         "nixpkgs": [
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1778647252,
-        "narHash": "sha256-xBQNo1utElJUsU76HqavOWZUVhZloZESBpd1I1Hi4Us=",
+        "lastModified": 1787011277,
+        "narHash": "sha256-4G8k8joGzxTuONSeExhFsHY640SXsQa1orlFvALfy28=",
         "owner": "jonhermansen",
         "repo": "grub",
-        "rev": "0188b833c900dccc6fdcc47d356d344697dbbf04",
+        "rev": "745b435d31dac659f508e706f91c9e5063eaf7c6",
         "type": "github"
       },
       "original": {
@@ -268,7 +287,7 @@
       "inputs": {
         "berkeley-softfloat-3": "berkeley-softfloat-3",
         "berkeley-testfloat-3": "berkeley-testfloat-3",
-        "flake-utils": "flake-utils_2",
+        "flake-utils": "flake-utils_3",
         "keycodemapdb": "keycodemapdb",
         "nixpkgs": [
           "nixpkgs"
@@ -322,6 +341,21 @@
       }
     },
     "systems_2": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    },
+    "systems_3": {
       "locked": {
         "lastModified": 1681028828,
         "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
