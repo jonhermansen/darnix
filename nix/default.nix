@@ -29,6 +29,10 @@ let
   commonBootArgs = "-v debug=0x14f keepsyms=1 -s -enable_kprintf_spam atm_diagnostic_config=0x100 -noprogress io=0xff msgbuf=1048576 amfi_get_out_of_my_way=1 cs_enforcement_disable=1";
   x86BootArgs    = "${commonBootArgs} serial=1 rd=md0 ignore_msrs=1";
   arm64BootArgs  = "${commonBootArgs} serial=3 rd=md0";
+  # Test boot args: fixed_entropy=1 zeros the PRNG seed for deterministic
+  # output under QEMU -icount (no KASLR randomization).
+  x86TestBootArgs   = "${x86BootArgs} fixed_entropy=1";
+  arm64TestBootArgs = "${arm64BootArgs} fixed_entropy=1";
 
   xcodeXip = pkgs.requireFile {
     name = "Xcode_${xcodeVersion}_Universal.xip";
@@ -568,10 +572,7 @@ BOOTARGS_EOF
     targetRootfsHfs = mkRootfsHfs arch;
     targetRootfsMockfs = mkRootfsMockfs arch;
 
-    boot = if arch == "ARM64" then arm64Boot else x86Boot;
-
-    # ── ARM64 boot: stub firmware + flat kernel + ADT + debug harness ──
-    arm64Boot = let
+    mkArm64Boot = bootArgs: let
       # vmapple memory map: RAM at 0x70000000, firmware at 0x100000.
       # kernel_phys must have the same offset within a 32MB block as the
       # Mach-O __TEXT vmaddr, because start.s maps with L2 block entries.
@@ -582,7 +583,6 @@ BOOTARGS_EOF
       adt_phys    = "0x78010000";
       uart_base   = "0x20010000";
       mem_size    = "0x${pkgs.lib.toHexString ramBytes}";
-      bootArgs    = arm64BootArgs;
     in pkgs.runCommand "darnix-boot-${shortLabel}" {
       nativeBuildInputs = [ pkgs.python3 pkgs.darwin.cctools pkgs.stdenv.cc ];
     } ''
@@ -643,8 +643,7 @@ klog $VIRT_BASE ${kernel_phys}
 DBEOF
     '';
 
-    # ── X86_64 boot: GRUB EFI image + debug script ──
-    x86Boot = pkgs.runCommand "darnix-boot-${shortLabel}" {
+    mkX86Boot = bootArgs: pkgs.runCommand "darnix-boot-${shortLabel}" {
       nativeBuildInputs = [ pkgs.dosfstools pkgs.mtools ];
     } ''
       KERNEL_FILE=${kernelPath}
@@ -699,11 +698,18 @@ klog
 DBEOF
     '';
 
+    boot = if arch == "ARM64"
+      then mkArm64Boot arm64BootArgs
+      else mkX86Boot x86BootArgs;
+    testBootArtifact = if arch == "ARM64"
+      then mkArm64Boot arm64TestBootArgs
+      else mkX86Boot x86TestBootArgs;
+
     # ── Arch-specific fragments for the shared run script ──
-    bootSetup = if arch == "ARM64" then ''
-      KERNEL_PHYS=$(cat ${boot}/kernel_phys)
-      ADT_PHYS=$(cat ${boot}/adt_phys)
-      RAMDISK_PHYS=$(cat ${boot}/ramdisk_phys)
+    mkBootSetup = bootArt: if arch == "ARM64" then ''
+      KERNEL_PHYS=$(cat ${bootArt}/kernel_phys)
+      ADT_PHYS=$(cat ${bootArt}/adt_phys)
+      RAMDISK_PHYS=$(cat ${bootArt}/ramdisk_phys)
       dd if=/dev/zero of="$WORKDIR/aux.img" bs=1M count=1 2>/dev/null
       dd if=/dev/zero of="$WORKDIR/root.img" bs=1M count=1 2>/dev/null
     '' else ''
@@ -714,6 +720,7 @@ DBEOF
       SERIAL_LOG="/tmp/darnix-serial.log"
       SERIAL_ARG="-serial file:$SERIAL_LOG"
     '';
+    bootSetup = mkBootSetup boot;
 
     # Map nix arch to uname -m value for host/guest comparison
     guestUname = if arch == "ARM64" then "arm64" else "x86_64";
@@ -737,7 +744,7 @@ DBEOF
       fi
     '';
 
-    qemuArgsDef = if arch == "ARM64" then ''
+    mkQemuArgsDef = bootArt: if arch == "ARM64" then ''
       QEMU_BIN=${qemu}/bin/qemu-system-aarch64
       ${accelDetect}
       CPU_ARG=""
@@ -747,12 +754,12 @@ DBEOF
       QEMU_ARGS=(
         -M vmapple $CPU_ARG $ACCEL
         -m ${toString ramBytes}B -nographic
-        -bios ${boot}/fw.bin
+        -bios ${bootArt}/fw.bin
         -pflash "$WORKDIR/aux.img"
         -drive "file=$WORKDIR/root.img,if=pflash,format=raw"
-        -device "loader,file=${boot}/kernel.bin,addr=$KERNEL_PHYS,force-raw=on"
-        -device "loader,file=${boot}/adt.bin,addr=$ADT_PHYS,force-raw=on"
-        -device "loader,file=${boot}/rootfs.dmg,addr=$RAMDISK_PHYS,force-raw=on"
+        -device "loader,file=${bootArt}/kernel.bin,addr=$KERNEL_PHYS,force-raw=on"
+        -device "loader,file=${bootArt}/adt.bin,addr=$ADT_PHYS,force-raw=on"
+        -device "loader,file=${bootArt}/rootfs.dmg,addr=$RAMDISK_PHYS,force-raw=on"
         -no-reboot
       )
     '' else ''
@@ -768,12 +775,13 @@ DBEOF
         $CPU_ARG $ACCEL
         -drive "if=pflash,format=raw,readonly=on,file=$OVMF"
         -drive "if=pflash,format=raw,file=$WORKDIR/ovmf-vars.fd"
-        -drive "file=${boot}/esp.img,format=raw,if=virtio,readonly=on"
+        -drive "file=${bootArt}/esp.img,format=raw,if=virtio,readonly=on"
         $SERIAL_ARG
         -display none -monitor none
         -no-reboot
       )
     '';
+    qemuArgsDef = mkQemuArgsDef boot;
 
     preExec = if arch == "X86_64" then ''
       if [[ "$SERIAL_ARG" == *"file:"* ]]; then
@@ -832,10 +840,10 @@ DBEOF
       # Tests always use TCG + icount for deterministic, reproducible output.
       FORCE_TCG=1
 
-      ${bootSetup}
+      ${mkBootSetup testBootArtifact}
       ${if arch == "X86_64" then ''SERIAL_ARG="-serial stdio"'' else ""}
-      ${qemuArgsDef}
-      QEMU_ARGS+=(-icount "shift=auto")
+      ${mkQemuArgsDef testBootArtifact}
+      QEMU_ARGS+=(-icount "shift=0")
 
       "$QEMU_BIN" "''${QEMU_ARGS[@]}" > "$LOGFILE" 2>&1 &
       QEMU_PID=$!
@@ -904,10 +912,10 @@ DBEOF
       LOGFILE="$WORKDIR/boot.log"
       FORCE_TCG=1
 
-      ${bootSetup}
+      ${mkBootSetup testBootArtifact}
       ${if arch == "X86_64" then ''SERIAL_ARG="-serial stdio"'' else ""}
-      ${qemuArgsDef}
-      ${if sameArch then ''QEMU_ARGS+=(-icount "shift=auto")'' else ""}
+      ${mkQemuArgsDef testBootArtifact}
+      ${if sameArch then ''QEMU_ARGS+=(-icount "shift=0")'' else ""}
 
       "$QEMU_BIN" "''${QEMU_ARGS[@]}" > "$LOGFILE" 2>&1 &
       QEMU_PID=$!
