@@ -3,8 +3,6 @@ name: Boot Test
 on:
   push:
     branches: [main, nix]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
