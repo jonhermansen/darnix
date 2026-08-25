@@ -27,12 +27,21 @@ jobs:
     timeout-minutes: 90
     env:
       R2_STORE: s3://darnix-private?endpoint=https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com&region=auto
-      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
+
+      # The nix daemon runs as root and needs R2 credentials for substitution.
+      - name: Configure R2 credentials
+        run: |
+          sudo mkdir -p /var/root/.aws
+          sudo tee /var/root/.aws/credentials > /dev/null <<EOF
+          [default]
+          aws_access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
+          aws_secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          EOF
+          sudo chmod 600 /var/root/.aws/credentials
 
       - name: Write post-build-hook
         env:
@@ -44,10 +53,10 @@ jobs:
           cat > /tmp/post-build-hook.sh <<EOF
           #!/bin/bash
           set -eu
-          export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"
-          export AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"
+          export AWS_ACCESS_KEY_ID="${{ secrets.R2_ACCESS_KEY_ID }}"
+          export AWS_SECRET_ACCESS_KEY="${{ secrets.R2_SECRET_ACCESS_KEY }}"
           nix store sign --key-file /tmp/nix-cache-key.sec \$OUT_PATHS
-          nix copy --no-recursive --to "$R2_STORE" \$OUT_PATHS
+          nix copy --no-recursive --to "${{ env.R2_STORE }}" \$OUT_PATHS
           EOF
           chmod +x /tmp/post-build-hook.sh
 
@@ -60,12 +69,6 @@ jobs:
             trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= ${{ vars.NIX_CACHE_PUBLIC_KEY }}
             post-build-hook = /tmp/post-build-hook.sh
             connect-timeout = 60
-
-      - uses: DeterminateSystems/magic-nix-cache-action@908b263ff629f4cc17666315b7fd3ec127c6244d # v14
-        with:
-          # R2 is the upstream for custom builds — don't duplicate them in GHA cache.
-          # Standard cache.nixos.org paths are cached in GHA as a fast local mirror.
-          upstream-cache: ${{ env.R2_STORE }}
 
       - name: Build
         run: nix build .#packages.${{ matrix.system }}.run-${{ matrix.arch }} --print-out-paths
@@ -82,4 +85,6 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: rm -f /tmp/nix-cache-key.sec /tmp/post-build-hook.sh
+        run: |
+          rm -f /tmp/nix-cache-key.sec /tmp/post-build-hook.sh
+          sudo rm -f /var/root/.aws/credentials
