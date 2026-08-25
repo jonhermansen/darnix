@@ -24,54 +24,51 @@ jobs:
             runner: macos-26-intel
             system: x86_64-darwin
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 60
+    timeout-minutes: 90
     env:
-      R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      R2_STORE: s3://darnix-private?endpoint=https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com&region=auto
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
 
-      - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+      - name: Write post-build-hook
+        env:
+          NIX_CACHE_SECRET_KEY: ${{ secrets.NIX_CACHE_SECRET_KEY }}
+        run: |
+          echo "$NIX_CACHE_SECRET_KEY" > /tmp/nix-cache-key.sec
+          chmod 600 /tmp/nix-cache-key.sec
+
+          cat > /tmp/post-build-hook.sh <<EOF
+          #!/bin/bash
+          set -eu
+          export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"
+          export AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"
+          nix store sign --key-file /tmp/nix-cache-key.sec \$OUT_PATHS
+          nix copy --no-recursive --to "$R2_STORE" \$OUT_PATHS
+          EOF
+          chmod +x /tmp/post-build-hook.sh
+
+      # cachix/install-nix-action supports x86_64-darwin;
+      # DeterminateSystems/nix-installer-action dropped it.
+      - uses: cachix/install-nix-action@875018fe555aee647c21ea81888659240cd8e27b
+        with:
+          extra_nix_config: |
+            extra-substituters = ${{ env.R2_STORE }}
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= ${{ vars.NIX_CACHE_PUBLIC_KEY }}
+            post-build-hook = /tmp/post-build-hook.sh
+            connect-timeout = 60
 
       - uses: DeterminateSystems/magic-nix-cache-action@908b263ff629f4cc17666315b7fd3ec127c6244d # v14
-
-      - name: Check virtualization support
-        run: |
-          echo "sysctl hw.optional.arm.FEAT_VHE:"
-          sysctl hw.optional.arm.FEAT_VHE || true
-          echo "kern.hv_support:"
-          sysctl kern.hv_support || true
-          echo "Entitlements on this process:"
-          codesign -d --entitlements - /bin/sh 2>&1 || true
-
-      - name: Fetch Xcode and KDK from R2
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-        run: |
-          nix run .#awscli -- s3 cp s3://darnix-private/Xcode_26.4.1_Universal.xip ./Xcode_26.4.1_Universal.xip \
-            --endpoint-url "$R2_ENDPOINT" --quiet
-          nix run .#awscli -- s3 cp s3://darnix-private/Kernel_Debug_Kit_26.4.1_build_25E253.dmg ./Kernel_Debug_Kit_26.4.1_build_25E253.dmg \
-            --endpoint-url "$R2_ENDPOINT" --quiet
-
-      - name: Add Xcode and KDK to nix store
-        run: |
-          nix-store --add-fixed sha256 ./Xcode_26.4.1_Universal.xip
-          nix-store --add-fixed sha256 ./Kernel_Debug_Kit_26.4.1_build_25E253.dmg
-          rm -f ./Xcode_26.4.1_Universal.xip ./Kernel_Debug_Kit_26.4.1_build_25E253.dmg
+        with:
+          # R2 is the upstream for custom builds — don't duplicate them in GHA cache.
+          # Standard cache.nixos.org paths are cached in GHA as a fast local mirror.
+          upstream-cache: ${{ env.R2_STORE }}
 
       - name: Build
         run: nix build .#packages.${{ matrix.system }}.run-${{ matrix.arch }} --print-out-paths
-
-      # Xcode (~2.2 GB) and KDK (~1.2 GB) are fetched fresh from R2 each run.
-      # Delete them from the store so magic-nix-cache doesn't persist them
-      # into the 10 GB GitHub Actions cache.
-      - name: Evict Xcode/KDK from store
-        if: always()
-        run: |
-          nix-store --delete "$(nix eval --raw .#packages.${{ matrix.system }}.xcode.outPath)"
-          nix-store --delete "$(nix eval --raw .#packages.${{ matrix.system }}.kdk.outPath)"
 
       - name: Boot test
         run: nix run .#packages.${{ matrix.system }}.test-boot-${{ matrix.arch }}
@@ -82,3 +79,7 @@ jobs:
         with:
           name: boot-${{ matrix.arch }}
           path: /tmp/darnix-boot-*.txt
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/nix-cache-key.sec /tmp/post-build-hook.sh
