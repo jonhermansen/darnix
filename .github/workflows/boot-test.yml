@@ -67,7 +67,7 @@ jobs:
           exec >> /tmp/post-build-hook.log 2>&1
           echo "=== hook: \$OUT_PATHS ==="
           $NIX store sign --key-file /tmp/nix-cache-key.sec \$OUT_PATHS
-          $NIX copy --no-recursive --to "${{ env.R2_STORE }}" \$OUT_PATHS
+          $NIX copy --to "${{ env.R2_STORE }}" \$OUT_PATHS
           EOF
           chmod +x /tmp/post-build-hook.sh
 
