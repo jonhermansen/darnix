@@ -34,29 +34,10 @@ jobs:
       - name: Configure R2 credentials
         run: |
           sudo mkdir -p /var/root/.aws
-          sudo tee /var/root/.aws/credentials > /dev/null <<EOF
-          [default]
-          aws_access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
-          aws_secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          EOF
+          printf '[default]\naws_access_key_id = %s\naws_secret_access_key = %s\n' \
+            '${{ secrets.R2_ACCESS_KEY_ID }}' '${{ secrets.R2_SECRET_ACCESS_KEY }}' \
+            | sudo tee /var/root/.aws/credentials > /dev/null
           sudo chmod 600 /var/root/.aws/credentials
-
-      - name: Write post-build-hook
-        env:
-          NIX_CACHE_SECRET_KEY: ${{ secrets.NIX_CACHE_SECRET_KEY }}
-        run: |
-          echo "$NIX_CACHE_SECRET_KEY" > /tmp/nix-cache-key.sec
-          chmod 600 /tmp/nix-cache-key.sec
-
-          cat > /tmp/post-build-hook.sh <<EOF
-          #!/bin/bash
-          set -eu
-          export AWS_ACCESS_KEY_ID="${{ secrets.R2_ACCESS_KEY_ID }}"
-          export AWS_SECRET_ACCESS_KEY="${{ secrets.R2_SECRET_ACCESS_KEY }}"
-          nix store sign --key-file /tmp/nix-cache-key.sec \$OUT_PATHS
-          nix copy --no-recursive --to "${{ env.R2_STORE }}" \$OUT_PATHS
-          EOF
-          chmod +x /tmp/post-build-hook.sh
 
       # cachix/install-nix-action supports x86_64-darwin;
       # DeterminateSystems/nix-installer-action dropped it.
@@ -67,6 +48,26 @@ jobs:
             trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= ${{ vars.NIX_CACHE_PUBLIC_KEY }}
             post-build-hook = /tmp/post-build-hook.sh
             connect-timeout = 60
+
+      # Written after nix install so we can resolve the absolute path to nix.
+      # The daemon runs hooks in a minimal environment without PATH.
+      - name: Write post-build-hook
+        env:
+          NIX_CACHE_SECRET_KEY: ${{ secrets.NIX_CACHE_SECRET_KEY }}
+        run: |
+          echo "$NIX_CACHE_SECRET_KEY" > /tmp/nix-cache-key.sec
+          chmod 600 /tmp/nix-cache-key.sec
+
+          NIX="$(which nix)"
+          cat > /tmp/post-build-hook.sh <<EOF
+          #!/bin/bash
+          set -eu
+          export AWS_ACCESS_KEY_ID="${{ secrets.R2_ACCESS_KEY_ID }}"
+          export AWS_SECRET_ACCESS_KEY="${{ secrets.R2_SECRET_ACCESS_KEY }}"
+          $NIX store sign --key-file /tmp/nix-cache-key.sec \$OUT_PATHS
+          $NIX copy --no-recursive --to "${{ env.R2_STORE }}" \$OUT_PATHS
+          EOF
+          chmod +x /tmp/post-build-hook.sh
 
       - name: Build
         run: nix build .#packages.${{ matrix.system }}.run-${{ matrix.arch }} --print-out-paths
