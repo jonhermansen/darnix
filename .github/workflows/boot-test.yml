@@ -64,6 +64,8 @@ jobs:
           set -eu
           export AWS_ACCESS_KEY_ID="${{ secrets.R2_ACCESS_KEY_ID }}"
           export AWS_SECRET_ACCESS_KEY="${{ secrets.R2_SECRET_ACCESS_KEY }}"
+          exec >> /tmp/post-build-hook.log 2>&1
+          echo "=== hook: \$OUT_PATHS ==="
           $NIX store sign --key-file /tmp/nix-cache-key.sec \$OUT_PATHS
           $NIX copy --no-recursive --to "${{ env.R2_STORE }}" \$OUT_PATHS
           EOF
@@ -74,6 +76,10 @@ jobs:
 
       - name: Boot test
         run: nix run .#packages.${{ matrix.system }}.test-boot-${{ matrix.arch }}
+
+      - name: Post-build-hook log
+        if: always()
+        run: cat /tmp/post-build-hook.log 2>/dev/null || echo "no hook log"
 
       - name: Upload boot log
         if: always()
