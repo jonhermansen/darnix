@@ -137,6 +137,9 @@ let
 
   xcode = (pkgs.runCommand "xcode-${xcodeVersion}" {
     nativeBuildInputs = [ pkgs.xar pkgs.pbzx pkgs.cpio ];
+    outputHashMode = "recursive";
+    outputHashAlgo = "sha256";
+    outputHash = "0w3zj8hnilplykcscvwmasfpiqsgrnwvdwr8288ppv3d0ggr3f7l";
   } ''
     xar -xf ${xcodeXip}
     pbzx -n Content | cpio -i
@@ -151,10 +154,13 @@ let
   };
 
   kdk = (pkgs.runCommand "kdk-${kdkVersion}-${macosBuild}" {
-    nativeBuildInputs = [ pkgs.p7zip pkgs.xar pkgs.cpio pkgs.pbzx ];
+    nativeBuildInputs = [ pkgs.undmg pkgs.xar pkgs.cpio pkgs.pbzx ];
+    outputHashMode = "recursive";
+    outputHashAlgo = "sha256";
+    outputHash = "1isnzcqhxhz8z5fa81g5zk1ws360gjg398qn2bnc1q7r3a8z7wxc";
   } ''
-    7z x ${kdkDmg}
-    xar -xf "Kernel Debug Kit/KernelDebugKit.pkg"
+    undmg ${kdkDmg}
+    xar -xf KernelDebugKit.pkg
     mkdir -p $out/${kdkName}
     (cd $out/${kdkName} && pbzx -n $NIX_BUILD_TOP/KDK.pkg/Payload     | cpio -i)
     (cd $out/${kdkName} && pbzx -n $NIX_BUILD_TOP/KDK_SDK.pkg/Payload | cpio -i)
