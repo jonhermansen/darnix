@@ -843,13 +843,12 @@ DBEOF
       LOGFILE="/tmp/darnix-boot-${shortLabel}.txt"
       echo "=== Darnix boot test: ${shortLabel} ==="
 
-      # Tests always use TCG + icount for deterministic, reproducible output.
       FORCE_TCG=1
 
       ${mkBootSetup testBootArtifact}
       ${if arch == "X86_64" then ''SERIAL_ARG="-serial stdio"'' else ""}
       ${mkQemuArgsDef testBootArtifact}
-      QEMU_ARGS+=(-icount "shift=0")
+      ${if sameArch then ''QEMU_ARGS+=(-icount "shift=0")'' else ""}
 
       "$QEMU_BIN" "''${QEMU_ARGS[@]}" > "$LOGFILE" 2>&1 &
       QEMU_PID=$!

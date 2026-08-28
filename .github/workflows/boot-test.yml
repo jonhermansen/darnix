@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  boot-test:
+  build:
     strategy:
       fail-fast: false
       matrix:
@@ -22,7 +22,7 @@ jobs:
             runner: macos-26-intel
             system: x86_64-darwin
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 90
+    timeout-minutes: 60
     env:
       R2_STORE: s3://darnix-private?endpoint=https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com&region=auto
     steps:
@@ -87,22 +87,60 @@ jobs:
           pgrep -x oahd > /dev/null && echo "oahd running (Rosetta active)" || echo "oahd not running"
 
       - name: Build
-        run: nix build .#packages.${{ matrix.system }}.run-${{ matrix.arch }} --print-out-paths
-
-      - name: Boot test
-        run: nix run .#packages.${{ matrix.system }}.test-boot-${{ matrix.arch }}
+        run: |
+          nix build .#packages.${{ matrix.system }}.run-arm64 --print-out-paths
+          nix build .#packages.${{ matrix.system }}.run-x86_64 --print-out-paths
 
       - name: Post-build-hook log
         if: always()
         run: cat /tmp/post-build-hook.log 2>/dev/null || echo "no hook log"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f /tmp/nix-cache-key.sec /tmp/post-build-hook.sh
+          sudo rm -f /var/root/.aws/credentials
+
+  boot-test:
+    needs: build
+    runs-on: macos-26
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+          - arch: x86_64
+    env:
+      R2_STORE: s3://darnix-private?endpoint=https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com&region=auto
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Configure R2 credentials
+        run: |
+          sudo mkdir -p /var/root/.aws
+          printf '[default]\naws_access_key_id = %s\naws_secret_access_key = %s\n' \
+            '${{ secrets.R2_ACCESS_KEY_ID }}' '${{ secrets.R2_SECRET_ACCESS_KEY }}' \
+            | sudo tee /var/root/.aws/credentials > /dev/null
+          sudo chmod 600 /var/root/.aws/credentials
+
+      - uses: cachix/install-nix-action@875018fe555aee647c21ea81888659240cd8e27b
+        with:
+          extra_nix_config: |
+            extra-substituters = ${{ env.R2_STORE }}
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= ${{ vars.NIX_CACHE_PUBLIC_KEY }}
+            connect-timeout = 60
+
+      - name: Boot test
+        run: nix run .#packages.aarch64-darwin.test-boot-${{ matrix.arch }}
 
       - name: Collect logs
         if: always()
         run: |
           mkdir -p /tmp/darnix-artifacts
           cp /tmp/darnix-boot-*.txt /tmp/darnix-artifacts/ 2>/dev/null || true
-          cp /tmp/post-build-hook.log /tmp/darnix-artifacts/ 2>/dev/null || true
-          # Grab recent system log entries around QEMU / sandbox / crash
           log show --last 10m --predicate 'process == "qemu-system-x86_64" || process == "qemu-system-aarch64" || process == "sandboxd" || eventMessage contains "qemu"' \
             > /tmp/darnix-artifacts/system-log.txt 2>/dev/null || true
 
@@ -115,6 +153,4 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: |
-          rm -f /tmp/nix-cache-key.sec /tmp/post-build-hook.sh
-          sudo rm -f /var/root/.aws/credentials
+        run: sudo rm -f /var/root/.aws/credentials
