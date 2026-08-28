@@ -1,4 +1,4 @@
-name: Boot Test
+name: CI
 
 on:
   push:
@@ -101,7 +101,7 @@ jobs:
           rm -f /tmp/nix-cache-key.sec /tmp/post-build-hook.sh
           sudo rm -f /var/root/.aws/credentials
 
-  boot-test:
+  boot:
     needs: build
     runs-on: macos-26
     timeout-minutes: 30
