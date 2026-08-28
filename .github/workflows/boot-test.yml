@@ -71,6 +71,21 @@ jobs:
           EOF
           chmod +x /tmp/post-build-hook.sh
 
+      - name: Runner diagnostics
+        run: |
+          echo "=== CPU / Architecture ==="
+          uname -a
+          sysctl -n machdep.cpu.brand_string
+          sysctl -n hw.optional.arm64 2>/dev/null && echo "ARM64 support: yes" || echo "ARM64 support: no"
+          echo "=== Hardware ==="
+          system_profiler SPHardwareDataType 2>/dev/null | grep -E 'Model|Chip|Processor|Cores|Memory'
+          echo "=== Virtualization ==="
+          sysctl -n kern.hv_support 2>/dev/null && echo "HV framework: yes" || echo "HV framework: no"
+          echo "=== Disk ==="
+          df -h / | tail -1
+          echo "=== Rosetta ==="
+          pgrep -x oahd > /dev/null && echo "oahd running (Rosetta active)" || echo "oahd not running"
+
       - name: Build
         run: nix build .#packages.${{ matrix.system }}.run-${{ matrix.arch }} --print-out-paths
 
@@ -81,12 +96,22 @@ jobs:
         if: always()
         run: cat /tmp/post-build-hook.log 2>/dev/null || echo "no hook log"
 
-      - name: Upload boot log
+      - name: Collect logs
+        if: always()
+        run: |
+          mkdir -p /tmp/darnix-artifacts
+          cp /tmp/darnix-boot-*.txt /tmp/darnix-artifacts/ 2>/dev/null || true
+          cp /tmp/post-build-hook.log /tmp/darnix-artifacts/ 2>/dev/null || true
+          # Grab recent system log entries around QEMU / sandbox / crash
+          log show --last 10m --predicate 'process == "qemu-system-x86_64" || process == "qemu-system-aarch64" || process == "sandboxd" || eventMessage contains "qemu"' \
+            > /tmp/darnix-artifacts/system-log.txt 2>/dev/null || true
+
+      - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: boot-${{ matrix.arch }}
-          path: /tmp/darnix-boot-*.txt
+          path: /tmp/darnix-artifacts/
 
       - name: Cleanup
         if: always()
